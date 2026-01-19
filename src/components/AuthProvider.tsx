@@ -30,9 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setError('Timeout: Unable to fetch user data');
         }, 10000); // 10 seconds timeout
 
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          throw sessionError;
+        }
 
         if (session) {
+          // Fetch user data from the database
           const { data: userData, error: userError } = await supabase
             .from('user_informations')
             .select('*')
@@ -45,11 +51,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (userData) {
             setUser(userData);
+          } else {
+            // User not found in database, sign out
+            await supabase.auth.signOut();
+            setUser(null);
           }
+        } else {
+          setUser(null);
         }
       } catch (err) {
         console.error('Error fetching user:', err);
         setError('Failed to fetch user data');
+        // Sign out if there's an error to ensure clean state
+        await supabase.auth.signOut();
+        setUser(null);
       } finally {
         // Clear timeout if request completes before timeout
         if (timeoutId) {
@@ -61,27 +76,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_, session) => {
-      if (session) {
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         try {
-          const { data: userData, error: userError } = await supabase
-            .from('user_informations')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          if (session) {
+            const { data: userData, error: userError } = await supabase
+              .from('user_informations')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
 
-          if (userError) {
-            throw userError;
-          }
+            if (userError) {
+              throw userError;
+            }
 
-          if (userData) {
-            setUser(userData);
+            if (userData) {
+              setUser(userData);
+            } else {
+              // User not found in database, sign out
+              await supabase.auth.signOut();
+              setUser(null);
+            }
           }
         } catch (err) {
           console.error('Error on auth state change:', err);
           setError('Failed to update user data');
+          await supabase.auth.signOut();
+          setUser(null);
         }
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
@@ -121,6 +145,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (userData) {
           setUser(userData);
+        } else {
+          // User not found in database, sign out
+          await supabase.auth.signOut();
+          throw new Error('User not found in database');
         }
       }
     } catch (error: any) {

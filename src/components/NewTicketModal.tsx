@@ -11,6 +11,7 @@ import { useToast } from './ui/use-toast';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Ticket, UserRole } from '@/types';
+import { useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
 
 const NewTicketModal = () => {
   const [open, setOpen] = useState(false);
@@ -23,6 +24,7 @@ const NewTicketModal = () => {
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient(); // Initialize useQueryClient
 
   const generateUniqueTicketId = () => {
     const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
@@ -69,8 +71,8 @@ const NewTicketModal = () => {
         description: `Nouveau ticket: ${titre} (${newTicket.ticket_id_unique})`,
       });
       setOpen(false);
-      // Optionally refresh ticket list in parent component
-      window.location.reload(); // Simple refresh for now
+      // Invalidate the 'tickets' query to refetch the list
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     }
   };
 

@@ -1,6 +1,5 @@
 "use client";
 
-import React from 'react';
 import { Button } from './ui/button';
 import { useAuth } from './AuthProvider';
 import { useNavigate } from 'react-router-dom';

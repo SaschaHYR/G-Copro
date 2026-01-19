@@ -1,92 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
 import TicketDetailModal from './TicketDetailModal';
 import ReplyModal from './ReplyModal';
 import CloseModal from './CloseModal';
 import TransferModal from './TransferModal';
-import { supabase } from '@/integrations/supabase/client';
-import { Ticket, User } from '@/types';
-import { useAuth } from './AuthProvider';
-import { useTicketFilters } from '@/contexts/TicketFilterContext';
+import { useTickets } from '@/hooks/use-tickets'; // Import the new hook
 
 const TicketDataTable = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { tickets, isLoading, error, invalidateTickets } = useTickets();
   const { toast } = useToast();
-  const { statusFilter, coproFilter, periodFilter } = useTicketFilters();
 
-  const fetchTickets = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  if (error) {
+    toast({
+      title: "Erreur de chargement des tickets",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
 
-    setLoading(true);
-    let query = supabase
-      .from('tickets')
-      .select('*, createur:users!createur_id(first_name, last_name), cloture_par_user:users!cloture_par(first_name, last_name)');
-
-    // Apply role-based filtering
-    if (user.role === 'Proprietaire') {
-      query = query.eq('createur_id', user.id);
-    } else if (user.role === 'Conseil_Syndical') {
-      query = query.eq('copro', user.copro).in('destinataire_role', ['Conseil_Syndical', 'Proprietaire']);
-    } else if (user.role === 'Syndicat_Copropriete') {
-      query = query.eq('copro', user.copro).in('destinataire_role', ['Syndicat_Copropriete', 'Conseil_Syndical']);
-    } else if (user.role === 'ASL' || user.role === 'Superadmin') {
-      // ASL and Superadmin can see all tickets
-    } else {
-      // For 'En attente' or other roles, show no tickets
-      query = query.eq('createur_id', 'invalid_id'); // Effectively returns no tickets
-    }
-
-    // Apply additional filters from sidebar
-    if (statusFilter) {
-      query = query.eq('status', statusFilter);
-    }
-    if (coproFilter) {
-      query = query.eq('copro', coproFilter);
-    }
-    if (periodFilter) {
-      const now = new Date();
-      const days = parseInt(periodFilter);
-      if (!isNaN(days)) {
-        const cutoffDate = new Date(now.setDate(now.getDate() - days)).toISOString();
-        query = query.gte('date_create', cutoffDate);
-      }
-    }
-
-    const { data, error } = await query.order('date_create', { ascending: false });
-
-    if (error) {
-      toast({
-        title: "Erreur de chargement des tickets",
-        description: error.message,
-        variant: "destructive",
-      });
-      setTickets([]);
-    } else {
-      setTickets(data as Ticket[]);
-    }
-    setLoading(false);
-  }, [user, toast, statusFilter, coproFilter, periodFilter]); // Add filters to dependency array
-
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
-
-  // Callback to refresh tickets after an action
-  const handleActionSuccess = () => {
-    fetchTickets();
-  };
-
-  if (loading) {
+  if (isLoading) {
     return <div className="text-center py-8">Chargement des tickets...</div>;
   }
 
@@ -142,9 +77,9 @@ const TicketDataTable = () => {
                 <TableCell>
                   <div className="flex space-x-2">
                     <TicketDetailModal ticket={ticket} />
-                    <ReplyModal ticketId={ticket.id} onReplySuccess={handleActionSuccess} />
-                    <CloseModal ticketId={ticket.id} onCloseSuccess={handleActionSuccess} />
-                    <TransferModal ticketId={ticket.id} currentDestinataireRole={ticket.destinataire_role} onTransferSuccess={handleActionSuccess} />
+                    <ReplyModal ticketId={ticket.id} onReplySuccess={invalidateTickets} />
+                    <CloseModal ticketId={ticket.id} onCloseSuccess={invalidateTickets} />
+                    <TransferModal ticketId={ticket.id} currentDestinataireRole={ticket.destinataire_role} onTransferSuccess={invalidateTickets} />
                   </div>
                 </TableCell>
               </TableRow>

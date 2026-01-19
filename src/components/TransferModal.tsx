@@ -13,7 +13,7 @@ import { UserRole } from '@/types';
 
 interface TransferModalProps {
   ticketId: string;
-  currentDestinataireRole: UserRole;
+  currentDestinataireRole: UserRole; // Ajout de cette prop
   onTransferSuccess: () => void; // Callback to refresh ticket list
 }
 

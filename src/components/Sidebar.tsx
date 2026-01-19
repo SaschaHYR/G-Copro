@@ -1,25 +1,11 @@
 "use client";
 
-import React from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { useToast } from './ui/use-toast';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 
 const Sidebar = () => {
   const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
-  const { toast } = useToast();
-
-  // The NewTicketModal is now directly in the Index.tsx, so this button will trigger it.
-  // This handler is kept for consistency if a direct action is needed in the future.
-  const handleNewTicket = () => {
-    toast({
-      title: "Nouveau Ticket",
-      description: "Ouvrez le modal pour créer un nouveau ticket",
-    });
-  };
 
   return (
     <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md">

@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
-import { Ticket, User } from '@/types';
+import { Ticket } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TicketDetailModalProps {

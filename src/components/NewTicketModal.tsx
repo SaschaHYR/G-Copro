@@ -8,6 +8,7 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { useToast } from './ui/use-toast';
+import { useAuth } from './AuthProvider';
 
 const NewTicketModal = () => {
   const [open, setOpen] = useState(false);
@@ -16,6 +17,8 @@ const NewTicketModal = () => {
   const [categorie, setCategorie] = useState('');
   const [copro, setCopro] = useState('');
   const [piecesJointes, setPiecesJointes] = useState<File[]>([]);
+  const [destinataire, setDestinataire] = useState('');
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -82,6 +85,25 @@ const NewTicketModal = () => {
                 <SelectItem value="B">Bâtiment B</SelectItem>
                 <SelectItem value="C">Bâtiment C</SelectItem>
                 <SelectItem value="D">Bâtiment D</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="destinataire">Destinataire</Label>
+            <Select onValueChange={setDestinataire} value={destinataire} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Destinataire" />
+              </SelectTrigger>
+              <SelectContent>
+                {user?.role === 'Proprietaire' && (
+                  <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                )}
+                {user?.role === 'Conseil_Syndical' && (
+                  <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                )}
+                {user?.role === 'Syndicat_Copropriete' && (
+                  <SelectItem value="ASL">ASL</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

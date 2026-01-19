@@ -4,19 +4,25 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { useToast } from './ui/use-toast';
+import TicketDetailModal from './TicketDetailModal';
+import ReplyModal from './ReplyModal';
+import CloseModal from './CloseModal';
+import TransferModal from './TransferModal';
 
 interface Ticket {
   id: string;
   ticket_id_unique: string;
   titre: string;
+  description: string;
+  categorie: string;
   copro: string;
   createur: string;
   status: string;
   date_create: string;
   date_update: string;
   cloture_date: string;
+  pieces_jointes: string[];
 }
 
 const TicketDataTable = () => {
@@ -25,55 +31,33 @@ const TicketDataTable = () => {
       id: '1',
       ticket_id_unique: 'TICKET-001',
       titre: 'Problème de chauffage',
+      description: 'Le chauffage ne fonctionne pas dans l\'appartement 101.',
+      categorie: 'Chauffage',
       copro: 'A',
       createur: 'Jean Dupont',
       status: 'ouvert',
       date_create: '2023-10-01',
       date_update: '2023-10-01',
       cloture_date: '',
+      pieces_jointes: ['photo1.jpg', 'photo2.jpg'],
     },
     {
       id: '2',
       ticket_id_unique: 'TICKET-002',
       titre: 'Fuite d\'eau',
+      description: 'Il y a une fuite d\'eau dans la salle de bain.',
+      categorie: 'Eau',
       copro: 'B',
       createur: 'Marie Martin',
       status: 'en cours',
       date_create: '2023-10-02',
       date_update: '2023-10-03',
       cloture_date: '',
+      pieces_jointes: ['photo1.jpg'],
     },
   ]);
 
   const { toast } = useToast();
-
-  const handleView = (ticket: Ticket) => {
-    toast({
-      title: `Ticket ${ticket.ticket_id_unique}`,
-      description: `Titre: ${ticket.titre}`,
-    });
-  };
-
-  const handleReply = (ticket: Ticket) => {
-    toast({
-      title: `Répondre au ticket ${ticket.ticket_id_unique}`,
-      description: `Répondre au ticket: ${ticket.titre}`,
-    });
-  };
-
-  const handleClose = (ticket: Ticket) => {
-    toast({
-      title: `Clôturer le ticket ${ticket.ticket_id_unique}`,
-      description: `Clôturer le ticket: ${ticket.titre}`,
-    });
-  };
-
-  const handleTransfer = (ticket: Ticket) => {
-    toast({
-      title: `Transmettre le ticket ${ticket.ticket_id_unique}`,
-      description: `Transmettre le ticket: ${ticket.titre}`,
-    });
-  };
 
   return (
     <div className="overflow-x-auto">
@@ -108,18 +92,10 @@ const TicketDataTable = () => {
               <TableCell>{ticket.cloture_date || 'N/A'}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleView(ticket)}>
-                    Voir
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleReply(ticket)}>
-                    Répondre
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleClose(ticket)}>
-                    Clôturer
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleTransfer(ticket)}>
-                    Transmettre
-                  </Button>
+                  <TicketDetailModal ticket={ticket} />
+                  <ReplyModal ticketId={ticket.ticket_id_unique} />
+                  <CloseModal ticketId={ticket.ticket_id_unique} />
+                  <TransferModal ticketId={ticket.ticket_id_unique} />
                 </div>
               </TableCell>
             </TableRow>

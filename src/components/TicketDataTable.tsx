@@ -8,18 +8,22 @@ import ReplyModal from './ReplyModal';
 import CloseModal from './CloseModal';
 import TransferModal from './TransferModal';
 import { useTickets } from '@/hooks/use-tickets'; // Import the new hook
+import { useEffect } from 'react'; // Import useEffect
 
 const TicketDataTable = () => {
   const { tickets, isLoading, error, invalidateTickets } = useTickets();
   const { toast } = useToast();
 
-  if (error) {
-    toast({
-      title: "Erreur de chargement des tickets",
-      description: error.message,
-      variant: "destructive",
-    });
-  }
+  // Move toast call into useEffect to prevent infinite re-renders
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Erreur de chargement des tickets",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]); // Depend on error and toast
 
   if (isLoading) {
     return <div className="text-center py-8">Chargement des tickets...</div>;

@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Set up auth state listener
     const setupAuthListener = () => {
-      authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data: listenerData } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session) {
             try {
@@ -121,13 +121,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       });
+
+      authListener = listenerData;
     };
 
     setupAuthListener();
 
     return () => {
       isMounted = false;
-      if (authListener) {
+      if (authListener && authListener.subscription) {
         authListener.subscription.unsubscribe();
       }
     };

@@ -19,7 +19,7 @@ const validateSupabaseUrl = (url: string): string => {
 
 const validatedSupabaseUrl = validateSupabaseUrl(SUPABASE_URL);
 
-// Create a custom fetch function with CORS handling
+// Create a custom fetch function with CORS handling and proxy fallback
 const createFetchWithCORS = () => {
   return async (url: string, options: RequestInit = {}): Promise<Response> => {
     // Add custom headers for CORS
@@ -51,7 +51,6 @@ const createFetchWithCORS = () => {
 
       // Log response status for debugging
       console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -68,6 +67,26 @@ const createFetchWithCORS = () => {
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         console.log('Attempting to use proxy for CORS issue...');
         // Here you could implement a proxy solution if needed
+        // For now, we'll try to use a CORS proxy service
+        try {
+          const proxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
+          const proxyResponse = await fetch(proxyUrl, {
+            ...options,
+            headers,
+            credentials: 'omit', // Don't send credentials to proxy
+            signal: controller.signal,
+          });
+
+          if (!proxyResponse.ok) {
+            const errorData = await proxyResponse.json().catch(() => ({}));
+            throw new Error(errorData.message || `Proxy error! status: ${proxyResponse.status}`);
+          }
+
+          return proxyResponse;
+        } catch (proxyError) {
+          console.error('Proxy error:', proxyError);
+          throw new Error('Failed to connect to Supabase service. Please check your network connection and CORS settings.');
+        }
       }
 
       throw error;

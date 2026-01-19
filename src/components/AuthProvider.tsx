@@ -20,6 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [degradedMode, setDegradedMode] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
 
   // Configuration adaptée pour le développement local
@@ -160,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
           if (isMounted) {
             setLoading(false);
+            setAuthInitialized(true);
           }
           return;
         }
@@ -220,6 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
           setLoading(false);
+          setAuthInitialized(true);
         }
       }
     };
@@ -270,9 +273,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authListener = listenerData;
     };
 
-    // Initialize auth and setup listener
-    initializeAuth();
-    setupAuthListener();
+    // Only initialize if not already initialized
+    if (!authInitialized) {
+      initializeAuth();
+      setupAuthListener();
+    }
 
     return () => {
       console.log('[AuthProvider] Cleaning up...');
@@ -282,9 +287,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserData, isProduction, navigate]);
+  }, [authInitialized, fetchUserData, isProduction, navigate]);
 
-  if (loading) {
+  if (loading && !authInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

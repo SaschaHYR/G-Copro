@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useToast } from './ui/use-toast';
-import NewTicketModal from './NewTicketModal'; // Import NewTicketModal
+import { useTicketFilters } from '@/contexts/TicketFilterContext';
 
 const Sidebar = () => {
-  const [statusFilter, setStatusFilter] = useState('');
-  const [coproFilter, setCoproFilter] = useState('');
-  const [periodFilter, setPeriodFilter] = useState('');
+  const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
   const { toast } = useToast();
 
   // The NewTicketModal is now directly in the Index.tsx, so this button will trigger it.
@@ -36,8 +34,10 @@ const Sidebar = () => {
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
+              <SelectItem value="">Tous</SelectItem>
               <SelectItem value="ouvert">Ouvert</SelectItem>
               <SelectItem value="en cours">En cours</SelectItem>
+              <SelectItem value="transmis">Transmis</SelectItem>
               <SelectItem value="cloture">Clôturé</SelectItem>
             </SelectContent>
           </Select>
@@ -49,6 +49,7 @@ const Sidebar = () => {
               <SelectValue placeholder="Copropriété" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
+              <SelectItem value="">Toutes</SelectItem>
               <SelectItem value="A">Bâtiment A</SelectItem>
               <SelectItem value="B">Bâtiment B</SelectItem>
               <SelectItem value="C">Bâtiment C</SelectItem>
@@ -63,17 +64,13 @@ const Sidebar = () => {
               <SelectValue placeholder="Période" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
+              <SelectItem value="">Toutes</SelectItem>
               <SelectItem value="7">7 jours</SelectItem>
               <SelectItem value="30">30 jours</SelectItem>
               <SelectItem value="90">90 jours</SelectItem>
-              <SelectItem value="all">Tout</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        {/* The NewTicketModal trigger is now in the Header of the main content area */}
-        {/* <Button onClick={handleNewTicket} className="w-full rounded-md bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90">
-          Nouveau Ticket
-        </Button> */}
       </CardContent>
     </Card>
   );

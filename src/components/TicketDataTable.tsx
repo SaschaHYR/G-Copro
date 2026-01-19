@@ -12,12 +12,14 @@ import TransferModal from './TransferModal';
 import { supabase } from '@/integrations/supabase/client';
 import { Ticket, User } from '@/types';
 import { useAuth } from './AuthProvider';
+import { useTicketFilters } from '@/contexts/TicketFilterContext';
 
 const TicketDataTable = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { statusFilter, coproFilter, periodFilter } = useTicketFilters();
 
   const fetchTickets = useCallback(async () => {
     if (!user) {
@@ -30,6 +32,7 @@ const TicketDataTable = () => {
       .from('tickets')
       .select('*, createur:users!createur_id(first_name, last_name), cloture_par_user:users!cloture_par(first_name, last_name)');
 
+    // Apply role-based filtering
     if (user.role === 'Proprietaire') {
       query = query.eq('createur_id', user.id);
     } else if (user.role === 'Conseil_Syndical') {
@@ -41,6 +44,22 @@ const TicketDataTable = () => {
     } else {
       // For 'En attente' or other roles, show no tickets
       query = query.eq('createur_id', 'invalid_id'); // Effectively returns no tickets
+    }
+
+    // Apply additional filters from sidebar
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+    if (coproFilter) {
+      query = query.eq('copro', coproFilter);
+    }
+    if (periodFilter) {
+      const now = new Date();
+      const days = parseInt(periodFilter);
+      if (!isNaN(days)) {
+        const cutoffDate = new Date(now.setDate(now.getDate() - days)).toISOString();
+        query = query.gte('date_create', cutoffDate);
+      }
     }
 
     const { data, error } = await query.order('date_create', { ascending: false });
@@ -56,7 +75,7 @@ const TicketDataTable = () => {
       setTickets(data as Ticket[]);
     }
     setLoading(false);
-  }, [user, toast]);
+  }, [user, toast, statusFilter, coproFilter, periodFilter]); // Add filters to dependency array
 
   useEffect(() => {
     fetchTickets();

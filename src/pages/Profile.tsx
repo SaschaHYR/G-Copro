@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
+import { Home } from 'lucide-react';
 
 const Profile = () => {
   const { user, loading } = useAuth();
@@ -20,6 +22,7 @@ const Profile = () => {
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [loadingSave, setLoadingSave] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -116,7 +119,18 @@ const Profile = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Mon Profil</h1>
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="rounded-full"
+            title="Retour à l'accueil"
+          >
+            <Home className="h-5 w-5 text-primary hover:text-primary/80" />
+          </Button>
+          <h1 className="text-3xl font-extrabold text-foreground">Mon Profil</h1>
+        </div>
         {!isEditing && (
           <Button onClick={() => setIsEditing(true)} className="rounded-full">
             Modifier le profil

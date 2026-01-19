@@ -22,6 +22,11 @@ interface Copropriete {
   code_postal?: string;
   description?: string;
   actif: boolean;
+  syndic_nom?: string;
+  syndic_responsable_nom?: string;
+  syndic_responsable_prenom?: string;
+  syndic_email?: string;
+  syndic_telephone?: string;
 }
 
 const Coproprietes = () => {
@@ -36,7 +41,12 @@ const Coproprietes = () => {
     ville: '',
     code_postal: '',
     description: '',
-    actif: true
+    actif: true,
+    syndic_nom: '',
+    syndic_responsable_nom: '',
+    syndic_responsable_prenom: '',
+    syndic_email: '',
+    syndic_telephone: ''
   });
 
   const fetchCoproprietes = async () => {
@@ -82,7 +92,12 @@ const Coproprietes = () => {
         ville: '',
         code_postal: '',
         description: '',
-        actif: true
+        actif: true,
+        syndic_nom: '',
+        syndic_responsable_nom: '',
+        syndic_responsable_prenom: '',
+        syndic_email: '',
+        syndic_telephone: ''
       });
       fetchCoproprietes();
     } catch (error: any) {
@@ -237,7 +252,58 @@ const Coproprietes = () => {
                   className="rounded-md border-border focus:ring-primary focus:border-primary"
                 />
               </div>
-              <div className="flex items-center space-x-2">
+
+              <div className="pt-4 border-t border-border">
+                <h3 className="text-lg font-semibold mb-4">Informations du Syndic</h3>
+                <div>
+                  <Label htmlFor="syndic_nom" className="text-sm font-medium text-foreground">Nom du Syndic</Label>
+                  <Input
+                    id="syndic_nom"
+                    value={newCopropriete.syndic_nom}
+                    onChange={(e) => setNewCopropriete({...newCopropriete, syndic_nom: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="syndic_responsable_nom" className="text-sm font-medium text-foreground">Nom du Responsable</Label>
+                  <Input
+                    id="syndic_responsable_nom"
+                    value={newCopropriete.syndic_responsable_nom}
+                    onChange={(e) => setNewCopropriete({...newCopropriete, syndic_responsable_nom: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="syndic_responsable_prenom" className="text-sm font-medium text-foreground">Prénom du Responsable</Label>
+                  <Input
+                    id="syndic_responsable_prenom"
+                    value={newCopropriete.syndic_responsable_prenom}
+                    onChange={(e) => setNewCopropriete({...newCopropriete, syndic_responsable_prenom: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="syndic_email" className="text-sm font-medium text-foreground">Email du Syndic</Label>
+                  <Input
+                    id="syndic_email"
+                    type="email"
+                    value={newCopropriete.syndic_email}
+                    onChange={(e) => setNewCopropriete({...newCopropriete, syndic_email: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="syndic_telephone" className="text-sm font-medium text-foreground">Téléphone du Syndic</Label>
+                  <Input
+                    id="syndic_telephone"
+                    value={newCopropriete.syndic_telephone}
+                    onChange={(e) => setNewCopropriete({...newCopropriete, syndic_telephone: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-4">
                 <Checkbox
                   id="actif"
                   checked={newCopropriete.actif}
@@ -263,9 +329,12 @@ const Coproprietes = () => {
               <TableHeader className="bg-secondary">
                 <TableRow>
                   <TableHead className="text-primary-foreground rounded-tl-lg">Nom</TableHead>
+                  <TableHead className="text-primary-foreground">Syndic</TableHead>
+                  <TableHead className="text-primary-foreground">Responsable</TableHead>
+                  <TableHead className="text-primary-foreground">Email</TableHead>
+                  <TableHead className="text-primary-foreground">Téléphone</TableHead>
                   <TableHead className="text-primary-foreground">Adresse</TableHead>
                   <TableHead className="text-primary-foreground">Ville</TableHead>
-                  <TableHead className="text-primary-foreground">Code Postal</TableHead>
                   <TableHead className="text-primary-foreground">Statut</TableHead>
                   <TableHead className="text-primary-foreground rounded-tr-lg">Actions</TableHead>
                 </TableRow>
@@ -275,9 +344,12 @@ const Coproprietes = () => {
                   coproprietes.map((copropriete) => (
                     <TableRow key={copropriete.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">{copropriete.nom}</TableCell>
+                      <TableCell>{copropriete.syndic_nom || 'N/A'}</TableCell>
+                      <TableCell>{copropriete.syndic_responsable_prenom} {copropriete.syndic_responsable_nom}</TableCell>
+                      <TableCell>{copropriete.syndic_email || 'N/A'}</TableCell>
+                      <TableCell>{copropriete.syndic_telephone || 'N/A'}</TableCell>
                       <TableCell>{copropriete.adresse || 'N/A'}</TableCell>
                       <TableCell>{copropriete.ville || 'N/A'}</TableCell>
-                      <TableCell>{copropriete.code_postal || 'N/A'}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                           copropriete.actif ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -309,7 +381,7 @@ const Coproprietes = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Aucune copropriété trouvée.
                     </TableCell>
                   </TableRow>

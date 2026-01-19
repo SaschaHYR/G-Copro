@@ -27,7 +27,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       headers.set('X-Requested-With', 'XMLHttpRequest');
 
       // Remove credentials to avoid CORS issues with wildcard origins
-      const newOptions = { ...options, headers, credentials: 'omit' };
+      const newOptions = { ...options, headers };
 
       return fetch(url, newOptions);
     }

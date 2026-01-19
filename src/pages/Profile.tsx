@@ -54,7 +54,7 @@ const Profile = () => {
 
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_informations')
         .update({
           first_name: editedUser.first_name,

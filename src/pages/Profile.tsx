@@ -86,18 +86,13 @@ const Profile = () => {
     setLoadingSave(true);
 
     try {
-      // Verify that the authenticated user ID matches the user ID being edited
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
-
       const { data, error } = await supabase
         .from('user_informations')
         .update({
           first_name: firstName,
           last_name: lastName
         })
-        .eq('id', user.id) // Use the authenticated user's ID from the session
+        .eq('id', user.id)
         .select()
         .single();
 

@@ -19,6 +19,62 @@ const validateSupabaseUrl = (url: string): string => {
 
 const validatedSupabaseUrl = validateSupabaseUrl(SUPABASE_URL);
 
+// Create a custom fetch function with CORS handling
+const createFetchWithCORS = () => {
+  return async (url: string, options: RequestInit = {}): Promise<Response> => {
+    // Add custom headers for CORS
+    const headers = new Headers(options.headers || {});
+    headers.set('X-Client-Info', 'web-app');
+    headers.set('X-Requested-With', 'XMLHttpRequest');
+    headers.set('apikey', SUPABASE_PUBLISHABLE_KEY);
+    headers.set('Authorization', `Bearer ${SUPABASE_PUBLISHABLE_KEY}`);
+    headers.set('Content-Type', 'application/json');
+
+    // Add timeout to the request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds timeout
+
+    try {
+      // Log the request for debugging
+      console.log('Making request to:', url);
+      console.log('With headers:', Object.fromEntries(headers.entries()));
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+        mode: 'cors' // Explicitly set CORS mode
+      });
+
+      clearTimeout(timeoutId);
+
+      // Log response status for debugging
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Response error data:', errorData);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('Fetch error details:', error);
+
+      // If the error is a CORS error, try with a proxy
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        console.log('Attempting to use proxy for CORS issue...');
+        // Here you could implement a proxy solution if needed
+      }
+
+      throw error;
+    }
+  };
+};
+
 // Create Supabase client with enhanced configuration
 export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -57,48 +113,6 @@ export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_
     }
   },
   global: {
-    fetch: async (url, options = {}) => {
-      // Add custom headers for CORS
-      const headers = new Headers(options.headers);
-      headers.set('X-Client-Info', 'web-app');
-      headers.set('X-Requested-With', 'XMLHttpRequest');
-      headers.set('apikey', SUPABASE_PUBLISHABLE_KEY);
-      headers.set('Authorization', `Bearer ${SUPABASE_PUBLISHABLE_KEY}`);
-
-      // Add timeout to the request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
-
-      try {
-        // Log the request for debugging
-        console.log('Making request to:', url);
-        console.log('With headers:', Object.fromEntries(headers.entries()));
-
-        const response = await fetch(url, {
-          ...options,
-          headers,
-          credentials: 'include',
-          signal: controller.signal,
-          mode: 'cors' // Explicitly set CORS mode
-        });
-
-        clearTimeout(timeoutId);
-
-        // Log response status for debugging
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Response error data:', errorData);
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-
-        return response;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        console.error('Fetch error details:', error);
-        throw error;
-      }
-    }
+    fetch: createFetchWithCORS()
   }
 });

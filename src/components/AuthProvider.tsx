@@ -19,73 +19,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to fetch user data from database
-  const fetchUserData = async (userId: string): Promise<User | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('user_informations')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user data:', error);
-        return null;
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Unexpected error fetching user data:', err);
-      return null;
-    }
-  };
-
-  // Function to handle session changes
-  const handleSessionChange = async (session: any) => {
-    if (session) {
-      const userData = await fetchUserData(session.user.id);
-      if (userData) {
-        setUser(userData);
-        setError(null);
-      } else {
-        // User not found in database, sign out
-        await supabase.auth.signOut();
-        setUser(null);
-        setError('User not found in database');
-      }
-    } else {
-      setUser(null);
-      setError(null);
-    }
-  };
-
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
-    const initializeAuth = async () => {
+    const fetchUser = async () => {
       try {
         // Set a timeout to prevent infinite loading
         timeoutId = setTimeout(() => {
           setLoading(false);
-          setError('Timeout: Unable to initialize authentication');
-        }, 8000); // 8 seconds timeout
+          setError('Timeout: Unable to fetch user data');
+        }, 10000); // 10 seconds timeout
 
-        // Get initial session
+        // Get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('Session error:', sessionError);
-          setUser(null);
-          setError(sessionError.message);
-          return;
+          throw sessionError;
         }
 
-        await handleSessionChange(session);
+        if (session) {
+          // Fetch user data from the database
+          const { data: userData, error: userError } = await supabase
+            .from('user_informations')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userError) {
+            throw userError;
+          }
+
+          if (userData) {
+            setUser(userData);
+          } else {
+            // User not found in database, sign out
+            await supabase.auth.signOut();
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       } catch (err) {
-        console.error('Initialization error:', err);
-        setError('Failed to initialize authentication');
+        console.error('Error fetching user:', err);
+        setError('Failed to fetch user data');
+        // Sign out if there's an error to ensure clean state
+        await supabase.auth.signOut();
         setUser(null);
       } finally {
+        // Clear timeout if request completes before timeout
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
@@ -93,17 +74,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Initialize authentication
-    initializeAuth();
+    fetchUser();
 
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      await handleSessionChange(session);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        try {
+          if (session) {
+            const { data: userData, error: userError } = await supabase
+              .from('user_informations')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (userError) {
+              throw userError;
+            }
+
+            if (userData) {
+              setUser(userData);
+            } else {
+              // User not found in database, sign out
+              await supabase.auth.signOut();
+              setUser(null);
+            }
+          }
+        } catch (err) {
+          console.error('Error on auth state change:', err);
+          setError('Failed to update user data');
+          await supabase.auth.signOut();
+          setUser(null);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
     });
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
@@ -125,10 +133,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        const userData = await fetchUserData(data.user.id);
+        const { data: userData, error: userError } = await supabase
+          .from('user_informations')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userError) {
+          throw userError;
+        }
+
         if (userData) {
           setUser(userData);
         } else {
+          // User not found in database, sign out
           await supabase.auth.signOut();
           throw new Error('User not found in database');
         }
@@ -190,7 +208,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <p className="text-destructive">Erreur d'authentification</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"

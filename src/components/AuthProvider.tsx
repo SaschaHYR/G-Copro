@@ -18,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -40,10 +41,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchUser = async () => {
       try {
         if (typeof window === 'undefined') {
-          setLoading(false);
+          if (isMounted) setLoading(false);
           return;
         }
 
@@ -51,38 +54,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (sessionError) {
           console.error('Session error:', sessionError);
-          throw sessionError;
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+            setInitialLoadComplete(true);
+          }
+          return;
         }
 
         if (session) {
           try {
             const userData = await fetchUserData(session.user.id);
-            if (userData) {
+            if (userData && isMounted) {
               setUser(userData);
-            } else {
-              // User not found in database, sign out
+            } else if (isMounted) {
               await supabase.auth.signOut();
               setUser(null);
             }
           } catch (userError) {
             console.error('User data error:', userError);
-            await supabase.auth.signOut();
-            setUser(null);
+            if (isMounted) {
+              await supabase.auth.signOut();
+              setUser(null);
+            }
           }
-        } else {
+        } else if (isMounted) {
           setUser(null);
         }
       } catch (err) {
         console.error('Error fetching user:', err);
-        setError('Failed to fetch user data. Please check your network connection.');
-        try {
-          await supabase.auth.signOut();
-        } catch (signOutError) {
-          console.error('Error signing out:', signOutError);
+        if (isMounted) {
+          setError('Failed to fetch user data. Please check your network connection.');
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('Error signing out:', signOutError);
+          }
+          setUser(null);
         }
-        setUser(null);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setInitialLoadComplete(true);
+        }
       }
     };
 
@@ -94,34 +108,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session) {
             try {
               const userData = await fetchUserData(session.user.id);
-              if (userData) {
+              if (userData && isMounted) {
                 setUser(userData);
-              } else {
+              } else if (isMounted) {
                 await supabase.auth.signOut();
                 setUser(null);
               }
             } catch (userError) {
               console.error('User data error on auth state change:', userError);
-              await supabase.auth.signOut();
-              setUser(null);
+              if (isMounted) {
+                await supabase.auth.signOut();
+                setUser(null);
+              }
             }
           }
         } catch (err) {
           console.error('Error on auth state change:', err);
-          setError('Failed to update user data');
-          try {
-            await supabase.auth.signOut();
-          } catch (signOutError) {
-            console.error('Error signing out:', signOutError);
+          if (isMounted) {
+            setError('Failed to update user data');
+            try {
+              await supabase.auth.signOut();
+            } catch (signOutError) {
+              console.error('Error signing out:', signOutError);
+            }
+            setUser(null);
           }
-          setUser(null);
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' && isMounted) {
         setUser(null);
       }
     });
 
     return () => {
+      isMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -212,7 +231,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  if (loading) {
+  // Only show loading state if initial load is not complete
+  if (!initialLoadComplete) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

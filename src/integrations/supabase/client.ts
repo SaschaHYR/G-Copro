@@ -4,8 +4,23 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://krxfkcdnrsywwofefqpp.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGZrY2RucnN5d3dvZmVmcXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDA1MDcsImV4cCI6MjA4NDQxNjUwN30.sRFUMS3BCM4OTb1Luk2gOdIbrizfxKHepLO3iqKmKw8";
 
+// Validate Supabase URL
+const validateSupabaseUrl = (url: string): string => {
+  // Remove any trailing slashes
+  let validatedUrl = url.replace(/\/$/, '');
+
+  // Ensure the URL starts with https://
+  if (!validatedUrl.startsWith('https://')) {
+    validatedUrl = `https://${validatedUrl}`;
+  }
+
+  return validatedUrl;
+};
+
+const validatedSupabaseUrl = validateSupabaseUrl(SUPABASE_URL);
+
 // Create Supabase client with enhanced configuration
-export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -43,27 +58,45 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   },
   global: {
     fetch: async (url, options = {}) => {
-      // Add custom headers
+      // Add custom headers for CORS
       const headers = new Headers(options.headers);
       headers.set('X-Client-Info', 'web-app');
       headers.set('X-Requested-With', 'XMLHttpRequest');
+      headers.set('apikey', SUPABASE_PUBLISHABLE_KEY);
+      headers.set('Authorization', `Bearer ${SUPABASE_PUBLISHABLE_KEY}`);
 
-      // Add error handling for fetch
+      // Add timeout to the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+
       try {
+        // Log the request for debugging
+        console.log('Making request to:', url);
+        console.log('With headers:', Object.fromEntries(headers.entries()));
+
         const response = await fetch(url, {
           ...options,
           headers,
-          credentials: 'include'
+          credentials: 'include',
+          signal: controller.signal,
+          mode: 'cors' // Explicitly set CORS mode
         });
+
+        clearTimeout(timeoutId);
+
+        // Log response status for debugging
+        console.log('Response status:', response.status);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+          console.error('Response error data:', errorData);
           throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
         return response;
       } catch (error) {
-        console.error('Fetch error:', error);
+        clearTimeout(timeoutId);
+        console.error('Fetch error details:', error);
         throw error;
       }
     }

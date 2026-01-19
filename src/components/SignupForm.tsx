@@ -25,10 +25,23 @@ const SignupForm = () => {
         description: "Votre compte est en attente de validation",
       });
       navigate('/login');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      let errorMessage = "Une erreur est survenue lors de l'inscription";
+
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Impossible de se connecter au serveur d'inscription. Veuillez vérifier votre connexion Internet et les paramètres CORS.";
+      } else if (error.message.includes('network')) {
+        errorMessage = "Problème de réseau. Veuillez vérifier votre connexion.";
+      } else if (error.message.includes('User already registered')) {
+        errorMessage = "Cet email est déjà enregistré";
+      } else if (error.message.includes('Unable to connect to authentication service')) {
+        errorMessage = "Impossible de se connecter au service d'authentification. Veuillez vérifier la configuration.";
+      }
+
       toast({
         title: "Erreur d'inscription",
-        description: "Une erreur est survenue lors de l'inscription",
+        description: errorMessage,
         variant: "destructive",
       });
     }

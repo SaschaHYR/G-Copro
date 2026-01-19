@@ -5,7 +5,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://krxfkcdnrsyww
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGZrY2RucnN5d3dvZmVmcXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDA1MDcsImV4cCI6MjA4NDQxNjUwN30.sRFUMS3BCM4OTb1Luk2gOdIbrizfxKHepLO3iqKmKw8";
 
 // Validate Supabase URL
-const validateSupabaseUrl = (url: string): string =&gt; {
+const validateSupabaseUrl = (url: string): string => {
   // Remove any trailing slashes
   let validatedUrl = url.replace(/\/$/, '');
 
@@ -26,7 +26,7 @@ export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_
     persistSession: true,
     detectSessionInUrl: true,
     storage: {
-      getItem: (key) =&gt; {
+      getItem: (key) => {
         try {
           const item = localStorage.getItem(key);
           return item ? JSON.parse(item) : null;
@@ -35,14 +35,14 @@ export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_
           return null;
         }
       },
-      setItem: (key, value) =&gt; {
+      setItem: (key, value) => {
         try {
           localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
           console.error('Error writing to localStorage:', error);
         }
       },
-      removeItem: (key) =&gt; {
+      removeItem: (key) => {
         try {
           localStorage.removeItem(key);
         } catch (error) {

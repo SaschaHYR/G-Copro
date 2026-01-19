@@ -18,7 +18,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -43,98 +42,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    const fetchUser = async () => {
+    const initializeAuth = async () => {
       try {
+        // Check if we're in a browser environment
         if (typeof window === 'undefined') {
-          if (isMounted) setLoading(false);
+          setLoading(false);
           return;
         }
 
+        // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
           console.error('Session error:', sessionError);
-          if (isMounted) {
-            setUser(null);
-            setLoading(false);
-            setInitialLoadComplete(true);
-          }
+          setUser(null);
+          setLoading(false);
           return;
         }
 
+        // If there's a session, fetch user data
         if (session) {
           try {
             const userData = await fetchUserData(session.user.id);
-            if (userData && isMounted) {
+            if (userData) {
               setUser(userData);
-            } else if (isMounted) {
+            } else {
+              // User not found in database, sign out
               await supabase.auth.signOut();
               setUser(null);
             }
           } catch (userError) {
             console.error('User data error:', userError);
-            if (isMounted) {
-              await supabase.auth.signOut();
-              setUser(null);
-            }
+            await supabase.auth.signOut();
+            setUser(null);
           }
-        } else if (isMounted) {
+        } else {
           setUser(null);
         }
       } catch (err) {
-        console.error('Error fetching user:', err);
-        if (isMounted) {
-          setError('Failed to fetch user data. Please check your network connection.');
-          try {
-            await supabase.auth.signOut();
-          } catch (signOutError) {
-            console.error('Error signing out:', signOutError);
-          }
-          setUser(null);
-        }
+        console.error('Initialization error:', err);
+        setError('Failed to initialize authentication');
+        setUser(null);
       } finally {
         if (isMounted) {
           setLoading(false);
-          setInitialLoadComplete(true);
         }
       }
     };
 
-    fetchUser();
+    // Initialize auth
+    initializeAuth();
 
+    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        try {
-          if (session) {
-            try {
-              const userData = await fetchUserData(session.user.id);
-              if (userData && isMounted) {
-                setUser(userData);
-              } else if (isMounted) {
-                await supabase.auth.signOut();
-                setUser(null);
-              }
-            } catch (userError) {
-              console.error('User data error on auth state change:', userError);
-              if (isMounted) {
-                await supabase.auth.signOut();
-                setUser(null);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Error on auth state change:', err);
-          if (isMounted) {
-            setError('Failed to update user data');
-            try {
+        if (session) {
+          try {
+            const userData = await fetchUserData(session.user.id);
+            if (userData) {
+              setUser(userData);
+            } else {
               await supabase.auth.signOut();
-            } catch (signOutError) {
-              console.error('Error signing out:', signOutError);
+              setUser(null);
             }
+          } catch (userError) {
+            console.error('User data error on auth state change:', userError);
+            await supabase.auth.signOut();
             setUser(null);
           }
         }
-      } else if (event === 'SIGNED_OUT' && isMounted) {
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
@@ -165,18 +142,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        try {
-          const userData = await fetchUserData(data.user.id);
-          if (userData) {
-            setUser(userData);
-          } else {
-            await supabase.auth.signOut();
-            throw new Error('User not found in database');
-          }
-        } catch (userError) {
-          console.error('User data error after login:', userError);
+        const userData = await fetchUserData(data.user.id);
+        if (userData) {
+          setUser(userData);
+        } else {
           await supabase.auth.signOut();
-          throw userError;
+          throw new Error('User not found in database');
         }
       }
     } catch (error: any) {
@@ -231,8 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Only show loading state if initial load is not complete
-  if (!initialLoadComplete) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

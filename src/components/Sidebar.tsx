@@ -4,12 +4,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 import { Button } from './ui/button';
-import { User } from 'lucide-react';
+import { User, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
 
 const Sidebar = () => {
   const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
@@ -62,7 +64,7 @@ const Sidebar = () => {
           </Select>
         </div>
       </CardContent>
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-2">
         <Button
           variant="outline"
           className="w-full justify-start rounded-full"
@@ -71,6 +73,16 @@ const Sidebar = () => {
           <User className="mr-2 h-4 w-4" />
           Mon Profil
         </Button>
+        {user?.role === 'Superadmin' && (
+          <Button
+            variant="outline"
+            className="w-full justify-start rounded-full"
+            onClick={() => navigate('/coproprietes')}
+          >
+            <Building className="mr-2 h-4 w-4" />
+            Copropriétés
+          </Button>
+        )}
       </div>
     </Card>
   );

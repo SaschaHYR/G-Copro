@@ -12,6 +12,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import AdminRoute from "./components/AdminRoute";
+import Coproprietes from "./pages/Coproprietes";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+            <Route path="/coproprietes" element={<AdminRoute><Coproprietes /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

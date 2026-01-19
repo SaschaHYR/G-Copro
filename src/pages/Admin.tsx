@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Link } from 'react-router-dom';
+import { Building } from 'lucide-react';
+
+interface Copropriete {
+  id: string;
+  nom: string;
+  actif: boolean;
+}
 
 const Admin = () => {
   const { toast } = useToast();
@@ -28,17 +36,32 @@ const Admin = () => {
     first_name: '',
     last_name: '',
     role: 'Proprietaire' as UserRole,
-    copro: 'A',
+    copro: '',
     actif: true
   });
 
   // Fetch all users
-  const { data: users, isLoading, error } = useQuery<User[], Error>({
+  const { data: users, isLoading: usersLoading, error: usersError } = useQuery<User[], Error>({
     queryKey: ['users'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_informations')
         .select('*');
+
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch copropriétés
+  const { data: coproprietes, isLoading: coprosLoading, error: coprosError } = useQuery<Copropriete[], Error>({
+    queryKey: ['coproprietes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coproprietes')
+        .select('*')
+        .eq('actif', true)
+        .order('nom', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -95,7 +118,7 @@ const Admin = () => {
         first_name: '',
         last_name: '',
         role: 'Proprietaire',
-        copro: 'A',
+        copro: '',
         actif: true
       });
 
@@ -162,12 +185,15 @@ const Admin = () => {
     }
   };
 
-  if (isLoading) {
+  if (usersLoading || coprosLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background p-6">
         <div className="flex justify-between items-center mb-6">
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
+          <div className="flex space-x-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-40" />
+          </div>
         </div>
 
         <Card className="w-full">
@@ -192,13 +218,13 @@ const Admin = () => {
     );
   }
 
-  if (error) {
+  if (usersError || coprosError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-destructive">Erreur de chargement des utilisateurs</p>
+          <p className="text-destructive">Erreur de chargement des données</p>
           <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['users', 'coproprietes'] })}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             Réessayer
@@ -212,110 +238,131 @@ const Admin = () => {
     <div className="min-h-screen flex flex-col bg-background p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-foreground">Panneau d'Administration</h1>
-        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-              Ajouter un utilisateur
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-lg">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-primary">Nouvel Utilisateur</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddUser} className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  required
-                  className="rounded-md border-border focus:ring-primary focus:border-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password" className="text-sm font-medium text-foreground">Mot de passe</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  required
-                  className="rounded-md border-border focus:ring-primary focus:border-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="first_name" className="text-sm font-medium text-foreground">Prénom</Label>
-                <Input
-                  id="first_name"
-                  value={newUser.first_name}
-                  onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
-                  className="rounded-md border-border focus:ring-primary focus:border-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="last_name" className="text-sm font-medium text-foreground">Nom</Label>
-                <Input
-                  id="last_name"
-                  value={newUser.last_name}
-                  onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
-                  className="rounded-md border-border focus:ring-primary focus:border-primary"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role" className="text-sm font-medium text-foreground">Rôle</Label>
-                <Select
-                  onValueChange={(value: UserRole) => setNewUser({...newUser, role: value})}
-                  value={newUser.role}
-                  required
-                >
-                  <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                    <SelectValue placeholder="Sélectionner un rôle" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    <SelectItem value="Proprietaire">Propriétaire</SelectItem>
-                    <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
-                    <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
-                    <SelectItem value="ASL">ASL</SelectItem>
-                    <SelectItem value="Superadmin">Superadmin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-                <Select
-                  onValueChange={(value) => setNewUser({...newUser, copro: value})}
-                  value={newUser.copro}
-                  required
-                >
-                  <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                    <SelectValue placeholder="Sélectionner une copropriété" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    <SelectItem value="A">Bâtiment A</SelectItem>
-                    <SelectItem value="B">Bâtiment B</SelectItem>
-                    <SelectItem value="C">Bâtiment C</SelectItem>
-                    <SelectItem value="D">Bâtiment D</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="actif"
-                  checked={newUser.actif}
-                  onChange={(e) => setNewUser({...newUser, actif: e.target.checked})}
-                  className="rounded border-border focus:ring-primary"
-                />
-                <Label htmlFor="actif" className="text-sm font-medium text-foreground">Actif</Label>
-              </div>
-              <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300">
-                Créer Utilisateur
+        <div className="flex space-x-2">
+          <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                Ajouter un utilisateur
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] rounded-lg">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold text-primary">Nouvel Utilisateur</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddUser} className="space-y-4">
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    required
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">Mot de passe</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    required
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="first_name" className="text-sm font-medium text-foreground">Prénom</Label>
+                  <Input
+                    id="first_name"
+                    value={newUser.first_name}
+                    onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="last_name" className="text-sm font-medium text-foreground">Nom</Label>
+                  <Input
+                    id="last_name"
+                    value={newUser.last_name}
+                    onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
+                    className="rounded-md border-border focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role" className="text-sm font-medium text-foreground">Rôle</Label>
+                  <Select
+                    onValueChange={(value: UserRole) => setNewUser({...newUser, role: value})}
+                    value={newUser.role}
+                    required
+                  >
+                    <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                      <SelectValue placeholder="Sélectionner un rôle" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="Proprietaire">Propriétaire</SelectItem>
+                      <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                      <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                      <SelectItem value="ASL">ASL</SelectItem>
+                      <SelectItem value="Superadmin">Superadmin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
+                  <Select
+                    onValueChange={(value) => setNewUser({...newUser, copro: value})}
+                    value={newUser.copro}
+                    required
+                  >
+                    <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                      <SelectValue placeholder="Sélectionner une copropriété" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {coproprietes && coproprietes.length > 0 ? (
+                        coproprietes.map((copro) => (
+                          <SelectItem key={copro.id} value={copro.nom}>
+                            {copro.nom}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          Aucune copropriété disponible
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <div className="mt-2 text-sm">
+                    <Link to="/coproprietes" className="text-primary hover:underline flex items-center">
+                      <Building className="h-3 w-3 mr-1" />
+                      Gérer les copropriétés
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="actif"
+                    checked={newUser.actif}
+                    onChange={(e) => setNewUser({...newUser, actif: e.target.checked})}
+                    className="rounded border-border focus:ring-primary"
+                  />
+                  <Label htmlFor="actif" className="text-sm font-medium text-foreground">Actif</Label>
+                </div>
+                <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300">
+                  Créer Utilisateur
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Link to="/coproprietes">
+            <Button variant="outline" className="rounded-full px-4 py-2 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+              <Building className="h-4 w-4 mr-2" />
+              Gérer les copropriétés
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="w-full">
@@ -350,10 +397,9 @@ const Admin = () => {
               </SelectTrigger>
               <SelectContent className="rounded-md">
                 <SelectItem value="all">Toutes les copropriétés</SelectItem>
-                <SelectItem value="A">Bâtiment A</SelectItem>
-                <SelectItem value="B">Bâtiment B</SelectItem>
-                <SelectItem value="C">Bâtiment C</SelectItem>
-                <SelectItem value="D">Bâtiment D</SelectItem>
+                {coproprietes && coproprietes.map((copro) => (
+                  <SelectItem key={copro.id} value={copro.nom}>{copro.nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -26,6 +26,16 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ user, onUpdate }) => 
     e.preventDefault();
     if (!authUser) return;
 
+    // Verify that the authenticated user ID matches the user ID being edited
+    if (authUser.id !== user.id) {
+      toast({
+        title: "Accès non autorisé",
+        description: "Vous ne pouvez modifier que votre propre profil.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -35,7 +45,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ user, onUpdate }) => 
           first_name: firstName,
           last_name: lastName
         })
-        .eq('id', authUser.id)
+        .eq('id', authUser.id) // Use the authenticated user's ID from the session
         .select()
         .single();
 

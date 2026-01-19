@@ -20,20 +20,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
     const fetchUser = async () => {
       try {
-        // Set a timeout to prevent infinite loading
-        timeoutId = setTimeout(() => {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined') {
           setLoading(false);
-          setError('Timeout: Unable to fetch user data');
-        }, 10000); // 10 seconds timeout
+          return;
+        }
 
         // Get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
+          console.error('Session error:', sessionError);
           throw sessionError;
         }
 
@@ -46,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (userError) {
+            console.error('User data error:', userError);
             throw userError;
           }
 
@@ -63,13 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching user:', err);
         setError('Failed to fetch user data');
         // Sign out if there's an error to ensure clean state
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('Error signing out:', signOutError);
+        }
         setUser(null);
       } finally {
-        // Clear timeout if request completes before timeout
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
         setLoading(false);
       }
     };
@@ -88,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .single();
 
             if (userError) {
+              console.error('User data error on auth state change:', userError);
               throw userError;
             }
 
@@ -102,7 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
           console.error('Error on auth state change:', err);
           setError('Failed to update user data');
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('Error signing out:', signOutError);
+          }
           setUser(null);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -112,9 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       authListener.subscription.unsubscribe();
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
   }, []);
 
@@ -123,12 +125,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
 
     try {
+      // Check network connectivity
+      if (!navigator.onLine) {
+        throw new Error('No internet connection');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Login error:', error);
         throw error;
       }
 
@@ -140,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
 
         if (userError) {
+          console.error('User data error after login:', userError);
           throw userError;
         }
 
@@ -152,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error: any) {
+      console.error('Login failed:', error);
       setError(error.message);
       throw error;
     } finally {
@@ -167,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       setUser(null);
     } catch (error: any) {
+      console.error('Logout error:', error);
       setError(error.message);
       throw error;
     } finally {
@@ -179,15 +190,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
 
     try {
+      // Check network connectivity
+      if (!navigator.onLine) {
+        throw new Error('No internet connection');
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (error) {
+        console.error('Signup error:', error);
         throw error;
       }
     } catch (error: any) {
+      console.error('Signup failed:', error);
       setError(error.message);
       throw error;
     } finally {

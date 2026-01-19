@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js'; // Ajout de l'import manquant
 import { User } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -190,27 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isLocalhost) {
           console.log('[AuthProvider] Detected localhost environment, adjusting settings...');
           // Configuration spécifique pour améliorer la stabilité en localhost
-          supabase = createClient(
-            import.meta.env.VITE_SUPABASE_URL || "https://krxfkcdnrsywwofefqpp.supabase.co",
-            import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGZrY2RucnN5d3dvZmVmcXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDA1MDcsImV4cCI6MjA4NDQxNjUwN30.sRFUMS3BCM4OTb1Luk2gOdIbrizfxKHepLO3iqKmKw8",
-            {
-              auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true,
-                storage: {
-                  getItem: (key) => localStorage.getItem(key),
-                  setItem: (key, value) => localStorage.setItem(key, value),
-                  removeItem: (key) => localStorage.removeItem(key),
-                },
-              },
-              realtime: {
-                params: {
-                  eventsPerSecond: 5, // Réduit pour localhost
-                },
-              },
-            }
-          );
+          // Utiliser le client supabase existant plutôt que d'en créer un nouveau
+          console.log('[AuthProvider] Using existing supabase client with localhost optimizations');
         }
 
         // Vérification de session avec réessais

@@ -11,6 +11,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <div>Chargement...</div>;
   }
 
+  // Allow access if user is authenticated and has Superadmin role
   if (!user || user.role !== 'Superadmin') {
     return <Navigate to="/" replace />;
   }

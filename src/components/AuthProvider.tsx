@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -19,20 +19,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const navigate = useNavigate();
 
   // Configuration adaptée pour le développement local
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const isProduction = !isLocalhost;
 
-  // Timeouts très généreux pour localhost
-  const AUTH_TIMEOUT = isLocalhost ? 120000 : 30000; // 2 minutes en localhost
-  const SESSION_TIMEOUT = isLocalhost ? 60000 : 15000; // 1 minute en localhost
+  // Timeouts adaptés à l'environnement
+  const AUTH_TIMEOUT = isLocalhost ? 60000 : 30000; // 60s en localhost, 30s en production
+  const SESSION_TIMEOUT = isLocalhost ? 45000 : 15000; // 45s en localhost, 15s en production
 
-  const fetchUserData = async (userId: string): Promise<User | null> => {
+  const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log('[AuthProvider] Fetching user data for ID:', userId);
 
     try {
-      // Timeout très long pour localhost
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), AUTH_TIMEOUT);
 
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('[AuthProvider] Error in fetchUserData:', err.message);
       return null;
     }
-  };
+  }, [AUTH_TIMEOUT]);
 
   const login = async (email: string, password: string) => {
     console.log('[AuthProvider] Attempting login for:', email);
@@ -145,17 +146,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
     let initializationTimeout: NodeJS.Timeout;
+    let sessionCheckTimeout: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
       setLoading(true);
       setError(null);
 
+      // Timeout global pour l'initialisation
       initializationTimeout = setTimeout(() => {
         if (isMounted) {
           console.error('[AuthProvider] Authentication initialization timeout');
           setError('Timeout: Authentication initialization took too long. Please check your internet connection.');
           setLoading(false);
+          setInitialLoadComplete(true);
         }
       }, AUTH_TIMEOUT);
 
@@ -163,75 +167,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (typeof window === 'undefined') {
           console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
           clearTimeout(initializationTimeout);
+          if (isMounted) {
+            setLoading(false);
+            setInitialLoadComplete(true);
+          }
           return;
         }
 
-        // Configuration spécifique pour localhost
-        if (isLocalhost) {
-          console.log('[AuthProvider] Detected localhost environment, using extended timeouts...');
-        }
+        console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
 
-        // Vérification de session avec timeout très long
-        const sessionCheck = new Promise(async (resolve, reject) => {
-          const sessionTimeout = setTimeout(() => {
-            reject(new Error('Timeout: Session check took too long'));
-          }, SESSION_TIMEOUT);
+        // Vérification de session avec timeout
+        const checkSession = async () => {
+          return new Promise(async (resolve, reject) => {
+            sessionCheckTimeout = setTimeout(() => {
+              reject(new Error('Timeout: Session check took too long'));
+            }, SESSION_TIMEOUT);
 
-          try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            clearTimeout(sessionTimeout);
+            try {
+              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+              clearTimeout(sessionCheckTimeout);
 
-            if (sessionError) {
-              console.error('[AuthProvider] Session error during initialization:', sessionError);
-              reject(sessionError);
-              return;
+              if (sessionError) {
+                console.error('[AuthProvider] Session error during initialization:', sessionError);
+                reject(sessionError);
+                return;
+              }
+
+              console.log('[AuthProvider] Session check complete. Session:', session);
+              resolve(session);
+            } catch (err) {
+              clearTimeout(sessionCheckTimeout);
+              reject(err);
             }
+          });
+        };
 
-            console.log('[AuthProvider] Supabase session check complete. Session:', session);
-            resolve(session);
-          } catch (err) {
-            clearTimeout(sessionTimeout);
-            reject(err);
-          }
-        });
+        try {
+          const session = await checkSession();
 
-        const session = await sessionCheck;
-
-        if (session) {
-          try {
+          if (session) {
+            console.log('[AuthProvider] Active session found, fetching user data...');
             const userData = await fetchUserData(session.user.id);
+
             if (userData) {
-              setUser(userData);
+              console.log('[AuthProvider] User data loaded successfully');
+              if (isMounted) {
+                setUser(userData);
+                setError(null);
+              }
             } else {
-              console.warn('[AuthProvider] User not found in database after session, signing out.');
+              console.warn('[AuthProvider] User not found in database, signing out.');
               await supabase.auth.signOut();
-              setUser(null);
-              setError('User profile not found. Please sign up or contact support.');
+              if (isMounted) {
+                setUser(null);
+                setError('User profile not found. Please sign up or contact support.');
+              }
             }
-          } catch (userError: any) {
-            console.error('[AuthProvider] Error fetching user data after session:', userError.message);
-            await supabase.auth.signOut();
-            setUser(null);
-            setError(userError.message || 'Failed to load user profile.');
+          } else {
+            console.log('[AuthProvider] No active session found.');
+            if (isMounted) {
+              setUser(null);
+            }
           }
-        } else {
-          console.log('[AuthProvider] No active session found.');
-          setUser(null);
+        } catch (sessionError: any) {
+          console.error('[AuthProvider] Session check failed:', sessionError.message);
+          if (isMounted) {
+            setError(sessionError.message || 'Failed to check session. Please try again.');
+            setUser(null);
+          }
         }
       } catch (err: any) {
         console.error('[AuthProvider] Error during authentication initialization:', err.message);
-        setError(err.message || 'Failed to initialize authentication. Please check your connection.');
-        setUser(null);
+        if (isMounted) {
+          setError(err.message || 'Failed to initialize authentication. Please check your connection.');
+          setUser(null);
+        }
       } finally {
         clearTimeout(initializationTimeout);
+        clearTimeout(sessionCheckTimeout);
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
           setLoading(false);
+          setInitialLoadComplete(true);
         }
       }
     };
 
-    initializeAuth();
+    // Exécuter l'initialisation une seule fois
+    if (!initialLoadComplete) {
+      initializeAuth();
+    }
 
     const setupAuthListener = () => {
       console.log('[AuthProvider] Setting up auth state change listener.');
@@ -243,26 +268,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               const userData = await fetchUserData(session.user.id);
               if (userData) {
-                setUser(userData);
-                setError(null);
                 console.log('[AuthProvider] User signed in:', userData.username);
+                if (isMounted) {
+                  setUser(userData);
+                  setError(null);
+                }
               } else {
                 console.warn('[AuthProvider] User not found in database on auth state change.');
                 await supabase.auth.signOut();
-                setUser(null);
-                setError('User profile not found. Please sign up or contact support.');
+                if (isMounted) {
+                  setUser(null);
+                  setError('User profile not found. Please sign up or contact support.');
+                }
               }
             } catch (userError: any) {
               console.error('[AuthProvider] Error fetching user data on auth state change:', userError.message);
               await supabase.auth.signOut();
-              setUser(null);
-              setError(userError.message || 'Failed to load user profile on auth change.');
+              if (isMounted) {
+                setUser(null);
+                setError(userError.message || 'Failed to load user profile on auth change.');
+              }
             }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('[AuthProvider] User signed out.');
-          setUser(null);
-          setError(null);
+          if (isMounted) {
+            setUser(null);
+            setError(null);
+          }
         }
       });
 
@@ -272,16 +305,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setupAuthListener();
 
     return () => {
+      console.log('[AuthProvider] Cleaning up...');
       isMounted = false;
       clearTimeout(initializationTimeout);
+      clearTimeout(sessionCheckTimeout);
       if (authListener && authListener.subscription) {
         console.log('[AuthProvider] Cleaning up auth listener.');
         authListener.subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT]);
 
-  if (loading) {
+  if (loading && !initialLoadComplete) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

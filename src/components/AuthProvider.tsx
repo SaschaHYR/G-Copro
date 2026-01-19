@@ -21,15 +21,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Timeout maximum pour les opérations d'authentification (10 secondes)
-  const AUTH_TIMEOUT = 10000;
+  // Augmenter les timeouts pour les opérations d'authentification
+  const AUTH_TIMEOUT = 30000; // 30 secondes au lieu de 10
+  const SESSION_TIMEOUT = 15000; // 15 secondes pour la vérification de session
 
   const fetchUserData = async (userId: string) => {
     console.log('[AuthProvider] Fetching user data for ID:', userId);
 
     // Créer une promesse avec timeout
     const fetchWithTimeout = new Promise(async (resolve, reject) => {
-      // Définir un timeout
+      // Définir un timeout plus long
       const timeoutId = setTimeout(() => {
         reject(new Error('Timeout: Unable to fetch user data within the time limit'));
       }, AUTH_TIMEOUT);
@@ -176,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const sessionCheck = new Promise(async (resolve, reject) => {
           const sessionTimeout = setTimeout(() => {
             reject(new Error('Timeout: Session check took too long'));
-          }, AUTH_TIMEOUT / 2); // 5 secondes pour la vérification de session
+          }, SESSION_TIMEOUT); // 15 secondes pour la vérification de session
 
           try {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();

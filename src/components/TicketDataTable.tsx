@@ -7,14 +7,14 @@ import TicketDetailModal from './TicketDetailModal';
 import ReplyModal from './ReplyModal';
 import CloseModal from './CloseModal';
 import TransferModal from './TransferModal';
-import { useTickets } from '@/hooks/use-tickets'; // Import the new hook
-import { useEffect } from 'react'; // Import useEffect
+import { useTickets } from '@/hooks/use-tickets';
+import { useEffect } from 'react';
+import { Skeleton } from './ui/skeleton';
 
 const TicketDataTable = () => {
   const { tickets, isLoading, error, invalidateTickets } = useTickets();
   const { toast } = useToast();
 
-  // Move toast call into useEffect to prevent infinite re-renders
   useEffect(() => {
     if (error) {
       toast({
@@ -23,10 +23,36 @@ const TicketDataTable = () => {
         variant: "destructive",
       });
     }
-  }, [error, toast]); // Depend on error and toast
+  }, [error, toast]);
 
   if (isLoading) {
-    return <div className="text-center py-8">Chargement des tickets...</div>;
+    return (
+      <div className="space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+            <Skeleton className="h-12 w-12 rounded" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <p className="text-destructive">Erreur de chargement des tickets</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>; // firstName, lastName, copro removed
+  signUp: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,23 +17,53 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          const { data: userData } = await supabase
+            .from('user_informations')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userData) {
+            setUser(userData);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user:', err);
+        setError('Failed to fetch user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
-        const { data: userData } = await supabase
-          .from('user_informations') // Fetch from new table
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        try {
+          const { data: userData } = await supabase
+            .from('user_informations')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-        if (userData) {
-          setUser(userData);
+          if (userData) {
+            setUser(userData);
+          }
+        } catch (err) {
+          console.error('Error on auth state change:', err);
+          setError('Failed to update user data');
         }
       } else {
         setUser(null);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -42,47 +72,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setLoading(true);
+    setError(null);
 
-    if (error) {
-      throw error;
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (data.user) {
-      const { data: userData } = await supabase
-        .from('user_informations') // Fetch from new table
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-
-      if (userData) {
-        setUser(userData);
+      if (error) {
+        throw error;
       }
+
+      if (data.user) {
+        const { data: userData } = await supabase
+          .from('user_informations')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userData) {
+          setUser(userData);
+        }
+      }
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
+    setLoading(true);
+    setError(null);
 
-  const signUp = async (email: string, password: string) => { // firstName, lastName, copro removed
-    const { error } = await supabase.auth.signUp({ // Removed 'data' as it's not used
-      email,
-      password,
-    });
-
-    if (error) {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error: any) {
+      setError(error.message);
       throw error;
+    } finally {
+      setLoading(false);
     }
-
-    // The handle_new_user trigger will automatically insert into user_informations
-    // with default values for role, actif, and NULL for first_name, last_name, copro.
-    // No explicit insert here is needed for user_informations.
   };
+
+  const signUp = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">Erreur d'authentification</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, signUp }}>

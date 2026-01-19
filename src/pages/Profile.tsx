@@ -11,22 +11,76 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { User } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
-  const [loading, setLoading] = useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
   const { toast } = useToast();
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background p-6">
+        <div className="flex justify-between items-center mb-6">
+          <Skeleton className="h-8 w-48" />
+        </div>
+
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardHeader className="flex flex-col items-center gap-4">
+            <Skeleton className="w-24 h-24 rounded-full" />
+            <div className="text-center space-y-2">
+              <Skeleton className="h-6 w-32 mx-auto" />
+              <Skeleton className="h-4 w-24 mx-auto" />
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!user) {
-    return <div className="text-center py-8">Chargement du profil...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">Utilisateur non trouvé</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setLoadingSave(true);
 
     try {
       const { data, error } = await supabase
@@ -55,7 +109,7 @@ const Profile = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoadingSave(false);
     }
   };
 
@@ -167,12 +221,12 @@ const Profile = () => {
                     setFirstName(user.first_name || '');
                     setLastName(user.last_name || '');
                   }}
-                  disabled={loading}
+                  disabled={loadingSave}
                 >
                   Annuler
                 </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                <Button type="submit" disabled={loadingSave}>
+                  {loadingSave ? 'Enregistrement...' : 'Enregistrer les modifications'}
                 </Button>
               </div>
             </form>

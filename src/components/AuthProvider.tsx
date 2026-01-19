@@ -28,22 +28,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isProduction = !isLocalhost;
 
   // Timeouts adaptés à l'environnement
-  const AUTH_TIMEOUT = isLocalhost ? 60000 : 30000;
-  const SESSION_TIMEOUT = isLocalhost ? 45000 : 15000;
-  const MAX_RETRIES = 2;
+  const AUTH_TIMEOUT = isLocalhost ? 15000 : 10000; // Reduced from 60s/30s to 15s/10s
+  const SESSION_TIMEOUT = isLocalhost ? 10000 : 5000; // Reduced from 45s/15s to 10s/5s
+  const MAX_RETRIES = 2; // Keep max retries at 2
+
+  // Track active timeouts to clear them
+  const [activeTimeouts, setActiveTimeouts] = useState<NodeJS.Timeout[]>([]);
+
+  // Helper function to clear all active timeouts
+  const clearAllTimeouts = useCallback(() => {
+    activeTimeouts.forEach(timeout => clearTimeout(timeout));
+    setActiveTimeouts([]);
+  }, [activeTimeouts]);
 
   const fetchUserData = useCallback(async (userId: string, attempt = 1): Promise<User | null> => {
-    console.log(`[AuthProvider] Attempt ${attempt}: Fetching user data for ID:`, userId);
+    if (attempt > MAX_RETRIES) {
+      throw new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`);
+    }
 
     return new Promise(async (resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        if (attempt < MAX_RETRIES) {
-          console.warn(`[AuthProvider] Timeout on attempt ${attempt}, retrying...`);
-          fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
-        } else {
-          reject(new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`));
-        }
+        reject(new Error(`Timeout: Fetch user data attempt ${attempt} failed`));
       }, AUTH_TIMEOUT);
+
+      // Add timeout to active timeouts
+      setActiveTimeouts(prev => [...prev, timeoutId]);
 
       try {
         const { data, error } = await supabase
@@ -53,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .maybeSingle();
 
         clearTimeout(timeoutId);
+        setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
 
         if (error) {
           console.error('[AuthProvider] User data fetch error:', error);
@@ -70,13 +80,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resolve(data);
       } catch (err: any) {
         clearTimeout(timeoutId);
+        setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
         console.error('[AuthProvider] Error in fetchUserData:', err.message);
 
         if (attempt < MAX_RETRIES) {
           console.log(`[AuthProvider] Retrying fetchUserData (attempt ${attempt + 1}/${MAX_RETRIES})...`);
-          setTimeout(() => {
-            fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
-          }, 5000);
+          try {
+            const result = await fetchUserData(userId, attempt + 1);
+            resolve(result);
+          } catch (retryError) {
+            reject(retryError);
+          }
         } else {
           reject(new Error(`Failed to fetch user data after ${MAX_RETRIES} attempts: ${err.message}`));
         }
@@ -180,28 +194,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
-    let initializationTimeout: NodeJS.Timeout;
-    let sessionCheckTimeout: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
       setLoading(true);
       setError(null);
 
-      initializationTimeout = setTimeout(() => {
-        if (isMounted) {
-          console.error('[AuthProvider] Authentication initialization timeout');
-          setError('Timeout: Authentication initialization took too long. Please check your internet connection.');
-          setLoading(false);
-          setInitialLoadComplete(true);
-          setDegradedMode(true);
-        }
-      }, AUTH_TIMEOUT);
-
       try {
         if (typeof window === 'undefined') {
           console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
-          clearTimeout(initializationTimeout);
           if (isMounted) {
             setLoading(false);
             setInitialLoadComplete(true);
@@ -211,27 +212,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
 
-        const checkSession = async (attempt = 1) => {
+        const checkSession = async (attempt = 1): Promise<any> => {
+          if (attempt > MAX_RETRIES) {
+            throw new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`);
+          }
+
           return new Promise(async (resolve, reject) => {
-            sessionCheckTimeout = setTimeout(() => {
-              if (attempt < MAX_RETRIES) {
-                console.warn(`[AuthProvider] Session check timeout (attempt ${attempt}), retrying...`);
-                checkSession(attempt + 1).then(resolve).catch(reject);
-              } else {
-                reject(new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`));
-              }
+            const timeoutId = setTimeout(() => {
+              reject(new Error(`Timeout: Session check attempt ${attempt} failed`));
             }, SESSION_TIMEOUT);
+
+            // Add timeout to active timeouts
+            setActiveTimeouts(prev => [...prev, timeoutId]);
 
             try {
               const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-              clearTimeout(sessionCheckTimeout);
+              clearTimeout(timeoutId);
+              setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
 
               if (sessionError) {
                 console.error(`[AuthProvider] Session error (attempt ${attempt}):`, sessionError);
                 if (attempt < MAX_RETRIES) {
-                  setTimeout(() => {
-                    checkSession(attempt + 1).then(resolve).catch(reject);
-                  }, 5000);
+                  try {
+                    const result = await checkSession(attempt + 1);
+                    resolve(result);
+                  } catch (retryError) {
+                    reject(retryError);
+                  }
                 } else {
                   reject(sessionError);
                 }
@@ -241,11 +248,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('[AuthProvider] Session check successful:', session);
               resolve(session);
             } catch (err) {
-              clearTimeout(sessionCheckTimeout);
+              clearTimeout(timeoutId);
+              setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
               if (attempt < MAX_RETRIES) {
-                setTimeout(() => {
-                  checkSession(attempt + 1).then(resolve).catch(reject);
-                }, 5000);
+                try {
+                  const result = await checkSession(attempt + 1);
+                  resolve(result);
+                } catch (retryError) {
+                  reject(retryError);
+                }
               } else {
                 reject(err);
               }
@@ -296,8 +307,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setDegradedMode(true);
         }
       } finally {
-        clearTimeout(initializationTimeout);
-        clearTimeout(sessionCheckTimeout);
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
           setLoading(false);
@@ -360,14 +369,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       console.log('[AuthProvider] Cleaning up...');
       isMounted = false;
-      clearTimeout(initializationTimeout);
-      clearTimeout(sessionCheckTimeout);
+      clearAllTimeouts();
       if (authListener && authListener.subscription) {
         console.log('[AuthProvider] Cleaning up auth listener.');
         authListener.subscription.unsubscribe();
       }
     };
-  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT, MAX_RETRIES]);
+  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT, MAX_RETRIES, clearAllTimeouts]);
 
   if (loading && !initialLoadComplete) {
     return (

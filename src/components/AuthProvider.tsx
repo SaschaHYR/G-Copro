@@ -19,20 +19,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
-  // Augmenter les timeouts pour les opérations d'authentification
-  const AUTH_TIMEOUT = 30000; // 30 secondes au lieu de 10
-  const SESSION_TIMEOUT = 15000; // 15 secondes pour la vérification de session
+  // Configuration adaptée pour le développement local
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const MAX_RETRIES = 3;
 
-  const fetchUserData = async (userId: string) => {
-    console.log('[AuthProvider] Fetching user data for ID:', userId);
+  // Timeouts adaptés à l'environnement
+  const AUTH_TIMEOUT = isLocalhost ? 60000 : 30000; // 60s en localhost, 30s en production
+  const SESSION_TIMEOUT = isLocalhost ? 45000 : 15000; // 45s en localhost, 15s en production
+  const RETRY_DELAY = 5000; // 5 secondes entre les tentatives
 
-    // Créer une promesse avec timeout
-    const fetchWithTimeout = new Promise(async (resolve, reject) => {
-      // Définir un timeout plus long
+  const fetchUserData = async (userId: string, attempt = 1): Promise<User | null> => {
+    console.log(`[AuthProvider] Attempt ${attempt}: Fetching user data for ID:`, userId);
+
+    return new Promise(async (resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error('Timeout: Unable to fetch user data within the time limit'));
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[AuthProvider] Timeout on attempt ${attempt}, retrying...`);
+          fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
+        } else {
+          reject(new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`));
+        }
       }, AUTH_TIMEOUT);
 
       try {
@@ -42,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', userId)
           .maybeSingle();
 
-        // Clear timeout si la requête réussit
         clearTimeout(timeoutId);
 
         if (error) {
@@ -51,17 +59,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        console.log('[AuthProvider] User data fetched:', data);
+        if (!data) {
+          console.warn('[AuthProvider] No user data found for ID:', userId);
+          resolve(null);
+          return;
+        }
+
+        console.log('[AuthProvider] User data fetched successfully:', data);
         resolve(data);
       } catch (err: any) {
-        // Clear timeout si une erreur se produit
         clearTimeout(timeoutId);
         console.error('[AuthProvider] Error in fetchUserData:', err.message);
-        reject(err);
+
+        if (attempt < MAX_RETRIES) {
+          console.log(`[AuthProvider] Retrying fetchUserData (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => {
+            fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
+          }, RETRY_DELAY);
+        } else {
+          reject(new Error(`Failed to fetch user data after ${MAX_RETRIES} attempts: ${err.message}`));
+        }
       }
     });
-
-    return fetchWithTimeout;
   };
 
   const login = async (email: string, password: string) => {
@@ -78,7 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('[AuthProvider] Login successful, session:', data.session);
-      // Le listener onAuthStateChange va gérer la mise à jour de l'utilisateur
     } catch (err: any) {
       console.error('[AuthProvider] Login failed:', err.message);
       throw err;
@@ -120,7 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('[AuthProvider] Signup successful, user:', data.user);
 
-      // Create user profile in user_informations table
       if (data.user) {
         const { error: profileError } = await supabase
           .from('user_informations')
@@ -136,11 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (profileError) {
           console.error('[AuthProvider] Profile creation error:', profileError);
-          // Even if profile creation fails, the auth signup succeeded
         }
       }
-
-      // Le listener onAuthStateChange va gérer la mise à jour de l'utilisateur
     } catch (err: any) {
       console.error('[AuthProvider] Signup failed:', err.message);
       throw err;
@@ -157,11 +171,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
 
-      // Timeout pour l'initialisation complète
       initializationTimeout = setTimeout(() => {
         if (isMounted) {
           console.error('[AuthProvider] Authentication initialization timeout');
-          setError('Timeout: Authentication initialization took too long');
+          setError('Timeout: Authentication initialization took too long. Please check your internet connection.');
           setLoading(false);
         }
       }, AUTH_TIMEOUT);
@@ -173,37 +186,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // Vérifier la session avec timeout
-        const sessionCheck = new Promise(async (resolve, reject) => {
-          const sessionTimeout = setTimeout(() => {
-            reject(new Error('Timeout: Session check took too long'));
-          }, SESSION_TIMEOUT); // 15 secondes pour la vérification de session
-
-          try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            clearTimeout(sessionTimeout);
-
-            if (sessionError) {
-              console.error('[AuthProvider] Session error during initialization:', sessionError);
-              reject(sessionError);
-              return;
+        // Configuration spécifique pour localhost
+        if (isLocalhost) {
+          console.log('[AuthProvider] Detected localhost environment, adjusting settings...');
+          // Configuration spécifique pour améliorer la stabilité en localhost
+          supabase = createClient(
+            import.meta.env.VITE_SUPABASE_URL || "https://krxfkcdnrsywwofefqpp.supabase.co",
+            import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGZrY2RucnN5d3dvZmVmcXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDA1MDcsImV4cCI6MjA4NDQxNjUwN30.sRFUMS3BCM4OTb1Luk2gOdIbrizfxKHepLO3iqKmKw8",
+            {
+              auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true,
+                storage: {
+                  getItem: (key) => localStorage.getItem(key),
+                  setItem: (key, value) => localStorage.setItem(key, value),
+                  removeItem: (key) => localStorage.removeItem(key),
+                },
+              },
+              realtime: {
+                params: {
+                  eventsPerSecond: 5, // Réduit pour localhost
+                },
+              },
             }
+          );
+        }
 
-            console.log('[AuthProvider] Supabase session check complete. Session:', session);
-            resolve(session);
-          } catch (err) {
-            clearTimeout(sessionTimeout);
-            reject(err);
-          }
-        });
+        // Vérification de session avec réessais
+        const checkSessionWithRetry = async (attempt = 1): Promise<any> => {
+          return new Promise(async (resolve, reject) => {
+            const sessionTimeout = setTimeout(() => {
+              if (attempt < MAX_RETRIES) {
+                console.warn(`[AuthProvider] Session check timeout (attempt ${attempt}), retrying...`);
+                checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
+              } else {
+                reject(new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`));
+              }
+            }, SESSION_TIMEOUT);
 
-        const session = await sessionCheck;
+            try {
+              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+              clearTimeout(sessionTimeout);
+
+              if (sessionError) {
+                console.error(`[AuthProvider] Session error (attempt ${attempt}):`, sessionError);
+                if (attempt < MAX_RETRIES) {
+                  setTimeout(() => {
+                    checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
+                  }, RETRY_DELAY);
+                } else {
+                  reject(sessionError);
+                }
+                return;
+              }
+
+              console.log('[AuthProvider] Session check successful:', session);
+              resolve(session);
+            } catch (err) {
+              clearTimeout(sessionTimeout);
+              if (attempt < MAX_RETRIES) {
+                setTimeout(() => {
+                  checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
+                }, RETRY_DELAY);
+              } else {
+                reject(err);
+              }
+            }
+          });
+        };
+
+        const session = await checkSessionWithRetry();
 
         if (session) {
           try {
             const userData = await fetchUserData(session.user.id);
             if (userData) {
               setUser(userData);
+              setError(null);
             } else {
               console.warn('[AuthProvider] User not found in database after session, signing out.');
               await supabase.auth.signOut();
@@ -221,15 +281,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       } catch (err: any) {
-        console.error('[AuthProvider] Unexpected error during authentication initialization:', err.message);
-        setError(err.message || 'Failed to initialize authentication');
+        console.error('[AuthProvider] Error during authentication initialization:', err.message);
+        setError(err.message || 'Failed to initialize authentication. Please check your connection.');
         setUser(null);
       } finally {
-        // Toujours nettoyer le timeout
         clearTimeout(initializationTimeout);
-
         if (isMounted) {
-          console.log('[AuthProvider] Authentication initialization finished. Setting loading to false.');
+          console.log('[AuthProvider] Authentication initialization completed.');
           setLoading(false);
         }
       }
@@ -240,7 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setupAuthListener = () => {
       console.log('[AuthProvider] Setting up auth state change listener.');
       const { data: listenerData } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('[AuthProvider] Auth state change event:', event, 'Session:', session);
+        console.log('[AuthProvider] Auth state change:', event);
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session) {
@@ -249,8 +307,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (userData) {
                 setUser(userData);
                 setError(null);
+                console.log('[AuthProvider] User signed in:', userData.username);
               } else {
-                console.warn('[AuthProvider] User not found in database on auth state change, signing out.');
+                console.warn('[AuthProvider] User not found in database on auth state change.');
                 await supabase.auth.signOut();
                 setUser(null);
                 setError('User profile not found. Please sign up or contact support.');
@@ -278,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
       clearTimeout(initializationTimeout);
       if (authListener && authListener.subscription) {
-        console.log('[AuthProvider] Unsubscribing from auth state change listener.');
+        console.log('[AuthProvider] Cleaning up auth listener.');
         authListener.subscription.unsubscribe();
       }
     };
@@ -287,7 +346,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Chargement de l'authentification...</p>
+          {isLocalhost && (
+            <p className="text-sm text-muted-foreground/70">
+              Environnement de développement - cela peut prendre plus de temps
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -295,14 +362,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">Erreur d'authentification</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
+        <div className="text-center space-y-4 max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-destructive">Erreur d'authentification</h2>
+          <p className="text-muted-foreground">{error}</p>
+
+          {isLocalhost && (
+            <div className="bg-background/80 p-4 rounded-lg border border-border">
+              <h3 className="font-semibold mb-2">Conseils pour le développement local :</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Vérifiez votre connexion Internet</li>
+                <li>• Assurez-vous que Supabase est accessible</li>
+                <li>• Essayez de vider le cache du navigateur</li>
+                <li>• Si le problème persiste, vérifiez la console pour plus de détails</li>
+              </ul>
+            </div>
+          )}
+
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Réessayer
+          </button>
+
+          <button
+            onClick={() => navigate('/login')}
+            className="px-6 py-3 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            Se connecter à nouveau
           </button>
         </div>
       </div>

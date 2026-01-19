@@ -19,7 +19,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [degradedMode, setDegradedMode] = useState(false);
   const navigate = useNavigate();
 
@@ -27,76 +26,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const isProduction = !isLocalhost;
 
-  // Timeouts adaptés à l'environnement
-  const AUTH_TIMEOUT = isLocalhost ? 15000 : 10000;
-  const SESSION_TIMEOUT = isLocalhost ? 10000 : 5000;
-  const MAX_RETRIES = 2;
+  const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_informations')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-  // Track active timeouts to clear them
-  const [activeTimeouts, setActiveTimeouts] = useState<NodeJS.Timeout[]>([]);
-
-  // Helper function to clear all active timeouts
-  const clearAllTimeouts = useCallback(() => {
-    activeTimeouts.forEach(timeout => clearTimeout(timeout));
-    setActiveTimeouts([]);
-  }, [activeTimeouts]);
-
-  const fetchUserData = useCallback(async (userId: string, attempt = 1): Promise<User | null> => {
-    if (attempt > MAX_RETRIES) {
-      throw new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`);
-    }
-
-    return new Promise(async (resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error(`Timeout: Fetch user data attempt ${attempt} failed`));
-      }, AUTH_TIMEOUT);
-
-      // Add timeout to active timeouts
-      setActiveTimeouts(prev => [...prev, timeoutId]);
-
-      try {
-        const { data, error } = await supabase
-          .from('user_informations')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        clearTimeout(timeoutId);
-        setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
-
-        if (error) {
-          console.error('[AuthProvider] User data fetch error:', error);
-          reject(error);
-          return;
-        }
-
-        if (!data) {
-          console.warn('[AuthProvider] No user data found for ID:', userId);
-          resolve(null);
-          return;
-        }
-
-        console.log('[AuthProvider] User data fetched successfully:', data);
-        resolve(data);
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
-        console.error('[AuthProvider] Error in fetchUserData:', err.message);
-
-        if (attempt < MAX_RETRIES) {
-          console.log(`[AuthProvider] Retrying fetchUserData (attempt ${attempt + 1}/${MAX_RETRIES})...`);
-          try {
-            const result = await fetchUserData(userId, attempt + 1);
-            resolve(result);
-          } catch (retryError) {
-            reject(retryError);
-          }
-        } else {
-          reject(new Error(`Failed to fetch user data after ${MAX_RETRIES} attempts: ${err.message}`));
-        }
+      if (error) {
+        console.error('[AuthProvider] User data fetch error:', error);
+        return null;
       }
-    });
-  }, [AUTH_TIMEOUT, MAX_RETRIES]);
+
+      if (!data) {
+        console.warn('[AuthProvider] No user data found for ID:', userId);
+        return null;
+      }
+
+      console.log('[AuthProvider] User data fetched successfully:', data);
+      return data;
+    } catch (err: any) {
+      console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      return null;
+    }
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     console.log('[AuthProvider] Attempting login for:', email);
@@ -191,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Single useEffect for initialization
   useEffect(() => {
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
@@ -205,67 +160,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
           if (isMounted) {
             setLoading(false);
-            setInitialLoadComplete(true);
           }
           return;
         }
 
         console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
 
-        const checkSession = async (attempt = 1): Promise<any> => {
-          if (attempt > MAX_RETRIES) {
-            throw new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`);
+        try {
+          // Check for existing session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            console.error('[AuthProvider] Session error:', sessionError);
+            throw sessionError;
           }
 
-          return new Promise(async (resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-              reject(new Error(`Timeout: Session check attempt ${attempt} failed`));
-            }, SESSION_TIMEOUT);
-
-            // Add timeout to active timeouts
-            setActiveTimeouts(prev => [...prev, timeoutId]);
-
-            try {
-              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-              clearTimeout(timeoutId);
-              setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
-
-              if (sessionError) {
-                console.error(`[AuthProvider] Session error (attempt ${attempt}):`, sessionError);
-                if (attempt < MAX_RETRIES) {
-                  try {
-                    const result = await checkSession(attempt + 1);
-                    resolve(result);
-                  } catch (retryError) {
-                    reject(retryError);
-                  }
-                } else {
-                  reject(sessionError);
-                }
-                return;
-              }
-
-              console.log('[AuthProvider] Session check successful:', session);
-              resolve(session);
-            } catch (err) {
-              clearTimeout(timeoutId);
-              setActiveTimeouts(prev => prev.filter(id => id !== timeoutId));
-              if (attempt < MAX_RETRIES) {
-                try {
-                  const result = await checkSession(attempt + 1);
-                  resolve(result);
-                } catch (retryError) {
-                  reject(retryError);
-                }
-              } else {
-                reject(err);
-              }
-            }
-          });
-        };
-
-        try {
-          const session = await checkSession();
+          console.log('[AuthProvider] Session check successful:', session);
 
           if (session) {
             console.log('[AuthProvider] Active session found, fetching user data...');
@@ -310,15 +220,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
           setLoading(false);
-          setInitialLoadComplete(true);
         }
       }
     };
 
-    if (!initialLoadComplete) {
-      initializeAuth();
-    }
-
+    // Setup auth state change listener
     const setupAuthListener = () => {
       console.log('[AuthProvider] Setting up auth state change listener.');
       const { data: listenerData } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -364,20 +270,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authListener = listenerData;
     };
 
+    // Initialize auth and setup listener
+    initializeAuth();
     setupAuthListener();
 
     return () => {
       console.log('[AuthProvider] Cleaning up...');
       isMounted = false;
-      clearAllTimeouts();
       if (authListener && authListener.subscription) {
         console.log('[AuthProvider] Cleaning up auth listener.');
         authListener.subscription.unsubscribe();
       }
     };
-  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT, MAX_RETRIES, clearAllTimeouts]);
+  }, [fetchUserData, isProduction, navigate]);
 
-  if (loading && !initialLoadComplete) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

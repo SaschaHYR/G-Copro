@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -9,97 +9,123 @@ import TicketDetailModal from './TicketDetailModal';
 import ReplyModal from './ReplyModal';
 import CloseModal from './CloseModal';
 import TransferModal from './TransferModal';
-
-interface Ticket {
-  id: string;
-  ticket_id_unique: string;
-  titre: string;
-  description: string;
-  categorie: string;
-  copro: string;
-  createur: string;
-  status: string;
-  date_create: string;
-  date_update: string;
-  cloture_date: string;
-  pieces_jointes: string[];
-}
+import { supabase } from '@/integrations/supabase/client';
+import { Ticket, User } from '@/types';
+import { useAuth } from './AuthProvider';
 
 const TicketDataTable = () => {
-  const [tickets, setTickets] = useState<Ticket[]>([
-    {
-      id: '1',
-      ticket_id_unique: 'TICKET-001',
-      titre: 'Problème de chauffage',
-      description: 'Le chauffage ne fonctionne pas dans l\'appartement 101.',
-      categorie: 'Chauffage',
-      copro: 'A',
-      createur: 'Jean Dupont',
-      status: 'ouvert',
-      date_create: '2023-10-01',
-      date_update: '2023-10-01',
-      cloture_date: '',
-      pieces_jointes: ['photo1.jpg', 'photo2.jpg'],
-    },
-    {
-      id: '2',
-      ticket_id_unique: 'TICKET-002',
-      titre: 'Fuite d\'eau',
-      description: 'Il y a une fuite d\'eau dans la salle de bain.',
-      categorie: 'Eau',
-      copro: 'B',
-      createur: 'Marie Martin',
-      status: 'en cours',
-      date_create: '2023-10-02',
-      date_update: '2023-10-03',
-      cloture_date: '',
-      pieces_jointes: ['photo1.jpg'],
-    },
-  ]);
-
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
+  const fetchTickets = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    let query = supabase
+      .from('tickets')
+      .select('*, createur:users!createur_id(first_name, last_name), cloture_par_user:users!cloture_par(first_name, last_name)');
+
+    if (user.role === 'Proprietaire') {
+      query = query.eq('createur_id', user.id);
+    } else if (user.role === 'Conseil_Syndical') {
+      query = query.eq('copro', user.copro).in('destinataire_role', ['Conseil_Syndical', 'Proprietaire']);
+    } else if (user.role === 'Syndicat_Copropriete') {
+      query = query.eq('copro', user.copro).in('destinataire_role', ['Syndicat_Copropriete', 'Conseil_Syndical']);
+    } else if (user.role === 'ASL' || user.role === 'Superadmin') {
+      // ASL and Superadmin can see all tickets
+    } else {
+      // For 'En attente' or other roles, show no tickets
+      query = query.eq('createur_id', 'invalid_id'); // Effectively returns no tickets
+    }
+
+    const { data, error } = await query.order('date_create', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Erreur de chargement des tickets",
+        description: error.message,
+        variant: "destructive",
+      });
+      setTickets([]);
+    } else {
+      setTickets(data as Ticket[]);
+    }
+    setLoading(false);
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  if (loading) {
+    return <div className="text-center py-8">Chargement des tickets...</div>;
+  }
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg shadow-lg border border-border">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-secondary">
           <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Titre</TableHead>
-            <TableHead>Copro</TableHead>
-            <TableHead>Créé par</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Date création</TableHead>
-            <TableHead>Date de dernière action</TableHead>
-            <TableHead>Date clôture</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead className="text-primary-foreground rounded-tl-lg">ID</TableHead>
+            <TableHead className="text-primary-foreground">Titre</TableHead>
+            <TableHead className="text-primary-foreground">Copro</TableHead>
+            <TableHead className="text-primary-foreground">Créé par</TableHead>
+            <TableHead className="text-primary-foreground">Statut</TableHead>
+            <TableHead className="text-primary-foreground">Priorité</TableHead>
+            <TableHead className="text-primary-foreground">Date création</TableHead>
+            <TableHead className="text-primary-foreground">Date de dernière action</TableHead>
+            <TableHead className="text-primary-foreground rounded-tr-lg">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tickets.map((ticket) => (
-            <TableRow key={ticket.id}>
-              <TableCell>{ticket.ticket_id_unique}</TableCell>
-              <TableCell>{ticket.titre}</TableCell>
-              <TableCell>{ticket.copro}</TableCell>
-              <TableCell>{ticket.createur}</TableCell>
-              <TableCell>
-                <Badge variant={ticket.status === 'ouvert' ? 'default' : ticket.status === 'en cours' ? 'secondary' : 'destructive'}>
-                  {ticket.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{ticket.date_create}</TableCell>
-              <TableCell>{ticket.date_update}</TableCell>
-              <TableCell>{ticket.cloture_date || 'N/A'}</TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  <TicketDetailModal ticket={ticket} />
-                  <ReplyModal ticketId={ticket.ticket_id_unique} />
-                  <CloseModal ticketId={ticket.ticket_id_unique} />
-                  <TransferModal ticketId={ticket.ticket_id_unique} />
-                </div>
+          {tickets.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                Aucun ticket trouvé.
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            tickets.map((ticket) => (
+              <TableRow key={ticket.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell className="font-medium">{ticket.ticket_id_unique}</TableCell>
+                <TableCell>{ticket.titre}</TableCell>
+                <TableCell>{ticket.copro}</TableCell>
+                <TableCell>{ticket.createur?.first_name} {ticket.createur?.last_name}</TableCell>
+                <TableCell>
+                  <Badge
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    variant={
+                      ticket.status === 'ouvert'
+                        ? 'default'
+                        : ticket.status === 'en cours'
+                        ? 'secondary'
+                        : ticket.status === 'transmis'
+                        ? 'outline'
+                        : 'destructive'
+                    }
+                  >
+                    {ticket.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{ticket.priorite}</TableCell>
+                <TableCell>{new Date(ticket.date_create).toLocaleDateString()}</TableCell>
+                <TableCell>{ticket.date_update ? new Date(ticket.date_update).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <TicketDetailModal ticket={ticket} />
+                    <ReplyModal ticketId={ticket.id} />
+                    <CloseModal ticketId={ticket.id} />
+                    <TransferModal ticketId={ticket.id} />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

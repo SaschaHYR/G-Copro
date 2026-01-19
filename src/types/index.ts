@@ -26,6 +26,9 @@ export interface Ticket {
   cloture_par: string;
   cloture_date: string;
   pieces_jointes: string[];
+  // Add the joined user data
+  createur?: Pick<User, 'first_name' | 'last_name'>;
+  cloture_par_user?: Pick<User, 'first_name' | 'last_name'>;
 }
 
 export interface Commentaire {

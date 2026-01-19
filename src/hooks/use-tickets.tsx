@@ -31,8 +31,8 @@ export const useTickets = () => {
     } else if (user.role === 'ASL' || user.role === 'Superadmin') {
       // ASL and Superadmin can see all tickets
     } else {
-      // For 'En attente' or other roles, show no tickets
-      query = query.eq('createur_id', 'invalid_id'); // Effectively returns no tickets
+      // For 'En attente' or other roles, return empty array without making API call
+      return [];
     }
 
     // Apply additional filters from sidebar

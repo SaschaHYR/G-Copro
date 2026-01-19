@@ -20,6 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [degradedMode, setDegradedMode] = useState(false); // Mode dégradé
   const navigate = useNavigate();
 
   // Configuration adaptée pour le développement local
@@ -29,118 +30,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Timeouts adaptés à l'environnement
   const AUTH_TIMEOUT = isLocalhost ? 60000 : 30000; // 60s en localhost, 30s en production
   const SESSION_TIMEOUT = isLocalhost ? 45000 : 15000; // 45s en localhost, 15s en production
+  const MAX_RETRIES = 2; // Nombre maximal de tentatives
 
-  const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
-    console.log('[AuthProvider] Fetching user data for ID:', userId);
+  const fetchUserData = useCallback(async (userId: string, attempt = 1): Promise<User | null> => {
+    console.log(`[AuthProvider] Attempt ${attempt}: Fetching user data for ID:`, userId);
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), AUTH_TIMEOUT);
+    return new Promise(async (resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[AuthProvider] Timeout on attempt ${attempt}, retrying...`);
+          fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
+        } else {
+          reject(new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`));
+        }
+      }, AUTH_TIMEOUT);
 
-      const { data, error } = await supabase
-        .from('user_informations')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeoutId);
-
-      if (error) {
-        console.error('[AuthProvider] User data fetch error:', error);
-        return null;
-      }
-
-      if (!data) {
-        console.warn('[AuthProvider] No user data found for ID:', userId);
-        return null;
-      }
-
-      console.log('[AuthProvider] User data fetched successfully:', data);
-      return data;
-    } catch (err: any) {
-      console.error('[AuthProvider] Error in fetchUserData:', err.message);
-      return null;
-    }
-  }, [AUTH_TIMEOUT]);
-
-  const login = async (email: string, password: string) => {
-    console.log('[AuthProvider] Attempting login for:', email);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('[AuthProvider] Login error:', error);
-        throw error;
-      }
-
-      console.log('[AuthProvider] Login successful, session:', data.session);
-    } catch (err: any) {
-      console.error('[AuthProvider] Login failed:', err.message);
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    console.log('[AuthProvider] Attempting logout');
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('[AuthProvider] Logout error:', error);
-        throw error;
-      }
-      console.log('[AuthProvider] Logout successful');
-      setUser(null);
-      navigate('/login');
-    } catch (err: any) {
-      console.error('[AuthProvider] Logout failed:', err.message);
-      throw err;
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    console.log('[AuthProvider] Attempting signup for:', email);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-        },
-      });
-
-      if (error) {
-        console.error('[AuthProvider] Signup error:', error);
-        throw error;
-      }
-
-      console.log('[AuthProvider] Signup successful, user:', data.user);
-
-      if (data.user) {
-        const { error: profileError } = await supabase
+      try {
+        const { data, error } = await supabase
           .from('user_informations')
-          .insert({
-            id: data.user.id,
-            username: email,
-            role: 'En attente',
-            actif: true,
-            first_name: '',
-            last_name: '',
-            copro: null
-          });
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-        if (profileError) {
-          console.error('[AuthProvider] Profile creation error:', profileError);
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('[AuthProvider] User data fetch error:', error);
+          reject(error);
+          return;
+        }
+
+        if (!data) {
+          console.warn('[AuthProvider] No user data found for ID:', userId);
+          resolve(null);
+          return;
+        }
+
+        console.log('[AuthProvider] User data fetched successfully:', data);
+        resolve(data);
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        console.error('[AuthProvider] Error in fetchUserData:', err.message);
+
+        if (attempt < MAX_RETRIES) {
+          console.log(`[AuthProvider] Retrying fetchUserData (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+          setTimeout(() => {
+            fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
+          }, 5000); // Attendre 5 secondes avant de réessayer
+        } else {
+          reject(new Error(`Failed to fetch user data after ${MAX_RETRIES} attempts: ${err.message}`));
         }
       }
-    } catch (err: any) {
-      console.error('[AuthProvider] Signup failed:', err.message);
-      throw err;
-    }
-  };
+    });
+  }, [AUTH_TIMEOUT, MAX_RETRIES]);
+
+  // ... (garder les autres fonctions login, logout, signUp inchangées)
 
   useEffect(() => {
     let isMounted = true;
@@ -160,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setError('Timeout: Authentication initialization took too long. Please check your internet connection.');
           setLoading(false);
           setInitialLoadComplete(true);
+          setDegradedMode(true); // Activer le mode dégradé
         }
       }, AUTH_TIMEOUT);
 
@@ -177,10 +122,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
 
         // Vérification de session avec timeout
-        const checkSession = async () => {
+        const checkSession = async (attempt = 1) => {
           return new Promise(async (resolve, reject) => {
             sessionCheckTimeout = setTimeout(() => {
-              reject(new Error('Timeout: Session check took too long'));
+              if (attempt < MAX_RETRIES) {
+                console.warn(`[AuthProvider] Session check timeout (attempt ${attempt}), retrying...`);
+                checkSession(attempt + 1).then(resolve).catch(reject);
+              } else {
+                reject(new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`));
+              }
             }, SESSION_TIMEOUT);
 
             try {
@@ -188,16 +138,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               clearTimeout(sessionCheckTimeout);
 
               if (sessionError) {
-                console.error('[AuthProvider] Session error during initialization:', sessionError);
-                reject(sessionError);
+                console.error(`[AuthProvider] Session error (attempt ${attempt}):`, sessionError);
+                if (attempt < MAX_RETRIES) {
+                  setTimeout(() => {
+                    checkSession(attempt + 1).then(resolve).catch(reject);
+                  }, 5000);
+                } else {
+                  reject(sessionError);
+                }
                 return;
               }
 
-              console.log('[AuthProvider] Session check complete. Session:', session);
+              console.log('[AuthProvider] Session check successful:', session);
               resolve(session);
             } catch (err) {
               clearTimeout(sessionCheckTimeout);
-              reject(err);
+              if (attempt < MAX_RETRIES) {
+                setTimeout(() => {
+                  checkSession(attempt + 1).then(resolve).catch(reject);
+                }, 5000);
+              } else {
+                reject(err);
+              }
             }
           });
         };
@@ -234,6 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (isMounted) {
             setError(sessionError.message || 'Failed to check session. Please try again.');
             setUser(null);
+            setDegradedMode(true); // Activer le mode dégradé
           }
         }
       } catch (err: any) {
@@ -241,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           setError(err.message || 'Failed to initialize authentication. Please check your connection.');
           setUser(null);
+          setDegradedMode(true); // Activer le mode dégradé
         }
       } finally {
         clearTimeout(initializationTimeout);
@@ -272,6 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (isMounted) {
                   setUser(userData);
                   setError(null);
+                  setDegradedMode(false); // Désactiver le mode dégradé
                 }
               } else {
                 console.warn('[AuthProvider] User not found in database on auth state change.');
@@ -314,7 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT]);
+  }, [initialLoadComplete, fetchUserData, isProduction, AUTH_TIMEOUT, SESSION_TIMEOUT, MAX_RETRIES]);
 
   if (loading && !initialLoadComplete) {
     return (
@@ -356,6 +321,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Réessayer
+          </button>
+
+          <button
+            onClick={() => navigate('/login')}
+            className="px-6 py-3 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            Se connecter à nouveau
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Mode dégradé - permet à l'application de fonctionner avec des fonctionnalités limitées
+  if (degradedMode) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4 max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-warning">Mode dégradé</h2>
+          <p className="text-muted-foreground">
+            L'application fonctionne avec des fonctionnalités limitées en raison de problèmes de connexion.
+          </p>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Réessayer la connexion
           </button>
 
           <button

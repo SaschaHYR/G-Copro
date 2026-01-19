@@ -18,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -48,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if we're in a browser environment
         if (typeof window === 'undefined') {
           setLoading(false);
+          setAuthInitialized(true);
           return;
         }
 
@@ -58,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Session error:', sessionError);
           setUser(null);
           setLoading(false);
+          setAuthInitialized(true);
           return;
         }
 
@@ -87,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } finally {
         if (isMounted) {
           setLoading(false);
+          setAuthInitialized(true);
         }
       }
     };
@@ -209,7 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  if (loading) {
+  // Only show loading state if auth is not initialized
+  if (!authInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

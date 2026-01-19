@@ -26,11 +26,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       headers.set('X-Client-Info', 'web-app');
       headers.set('X-Requested-With', 'XMLHttpRequest');
 
-      return fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-      });
+      // Remove credentials to avoid CORS issues with wildcard origins
+      const newOptions = { ...options, headers, credentials: 'omit' };
+
+      return fetch(url, newOptions);
     }
   }
 });

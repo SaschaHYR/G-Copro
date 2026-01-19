@@ -12,12 +12,76 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { Home, Edit, Save, X } from 'lucide-react';
 
 const Profile = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedUser, setEditedUser] = useState({
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Update editedUser when user data changes
+  React.useEffect(() => {
+    if (user) {
+      setEditedUser({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+      });
+    }
+  }, [user]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    if (user) {
+      setEditedUser({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+      });
+    }
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_informations')
+        .update({
+          first_name: editedUser.first_name,
+          last_name: editedUser.last_name
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Profil mis à jour",
+        description: "Vos informations ont été mises à jour avec succès.",
+      });
+
+      setIsEditing(false);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la mise à jour du profil.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -88,6 +152,65 @@ const Profile = () => {
             <div>
               <p className="text-sm text-muted-foreground">Statut</p>
               <p className="font-medium">{user.actif ? 'Actif' : 'Inactif'}</p>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border">
+            <h3 className="text-lg font-semibold mb-4">Informations personnelles</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="first_name" className="text-sm font-medium text-muted-foreground">Prénom</Label>
+                <Input
+                  id="first_name"
+                  value={editedUser.first_name}
+                  onChange={(e) => setEditedUser({...editedUser, first_name: e.target.value})}
+                  disabled={!isEditing}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="last_name" className="text-sm font-medium text-muted-foreground">Nom</Label>
+                <Input
+                  id="last_name"
+                  value={editedUser.last_name}
+                  onChange={(e) => setEditedUser({...editedUser, last_name: e.target.value})}
+                  disabled={!isEditing}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-2 mt-6">
+              {!isEditing ? (
+                <Button
+                  variant="outline"
+                  onClick={handleEdit}
+                  className="rounded-full"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modifier
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
+                    className="rounded-full"
+                    disabled={isSaving}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    className="rounded-full"
+                    disabled={isSaving}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardContent>

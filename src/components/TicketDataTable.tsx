@@ -62,6 +62,11 @@ const TicketDataTable = () => {
     fetchTickets();
   }, [fetchTickets]);
 
+  // Callback to refresh tickets after an action
+  const handleActionSuccess = () => {
+    fetchTickets();
+  };
+
   if (loading) {
     return <div className="text-center py-8">Chargement des tickets...</div>;
   }
@@ -118,9 +123,9 @@ const TicketDataTable = () => {
                 <TableCell>
                   <div className="flex space-x-2">
                     <TicketDetailModal ticket={ticket} />
-                    <ReplyModal ticketId={ticket.id} />
-                    <CloseModal ticketId={ticket.id} />
-                    <TransferModal ticketId={ticket.id} />
+                    <ReplyModal ticketId={ticket.id} onReplySuccess={handleActionSuccess} />
+                    <CloseModal ticketId={ticket.id} onCloseSuccess={handleActionSuccess} />
+                    <TransferModal ticketId={ticket.id} currentDestinataireRole={ticket.destinataire_role} onTransferSuccess={handleActionSuccess} />
                   </div>
                 </TableCell>
               </TableRow>

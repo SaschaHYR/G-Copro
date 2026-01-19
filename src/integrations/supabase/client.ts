@@ -5,7 +5,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://krxfkcdnrsyww
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGZrY2RucnN5d3dvZmVmcXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDA1MDcsImV4cCI6MjA4NDQxNjUwN30.sRFUMS3BCM4OTb1Luk2gOdIbrizfxKHepLO3iqKmKw8";
 
 // Validate Supabase URL
-const validateSupabaseUrl = (url: string): string => {
+const validateSupabaseUrl = (url: string): string =&gt; {
   // Remove any trailing slashes
   let validatedUrl = url.replace(/\/$/, '');
 
@@ -19,14 +19,14 @@ const validateSupabaseUrl = (url: string): string => {
 
 const validatedSupabaseUrl = validateSupabaseUrl(SUPABASE_URL);
 
-// Create Supabase client with basic configuration
+// Create Supabase client with explicit API key configuration
 export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
     storage: {
-      getItem: (key) => {
+      getItem: (key) =&gt; {
         try {
           const item = localStorage.getItem(key);
           return item ? JSON.parse(item) : null;
@@ -35,14 +35,14 @@ export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_
           return null;
         }
       },
-      setItem: (key, value) => {
+      setItem: (key, value) =&gt; {
         try {
           localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
           console.error('Error writing to localStorage:', error);
         }
       },
-      removeItem: (key) => {
+      removeItem: (key) =&gt; {
         try {
           localStorage.removeItem(key);
         } catch (error) {
@@ -54,6 +54,12 @@ export const supabase = createClient(validatedSupabaseUrl, SUPABASE_PUBLISHABLE_
   realtime: {
     params: {
       eventsPerSecond: 10
+    }
+  },
+  global: {
+    headers: {
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
     }
   }
 });

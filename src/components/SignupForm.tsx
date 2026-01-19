@@ -29,7 +29,9 @@ const SignupForm = () => {
       console.error('Signup error:', error);
       let errorMessage = "Une erreur est survenue lors de l'inscription";
 
-      if (error.message.includes('Failed to fetch')) {
+      if (error.message.includes('No API key found in request')) {
+        errorMessage = "Clé API manquante. Veuillez vérifier la configuration.";
+      } else if (error.message.includes('Failed to fetch')) {
         errorMessage = "Impossible de se connecter au serveur d'inscription. Veuillez vérifier votre connexion Internet et les paramètres CORS.";
       } else if (error.message.includes('network')) {
         errorMessage = "Problème de réseau. Veuillez vérifier votre connexion.";
@@ -37,6 +39,8 @@ const SignupForm = () => {
         errorMessage = "Cet email est déjà enregistré";
       } else if (error.message.includes('Unable to connect to authentication service')) {
         errorMessage = "Impossible de se connecter au service d'authentification. Veuillez vérifier la configuration.";
+      } else if (error.status === 500) {
+        errorMessage = "Erreur serveur. Veuillez réessayer plus tard.";
       }
 
       toast({

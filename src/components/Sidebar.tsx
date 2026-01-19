@@ -3,16 +3,20 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
+import { Button } from './ui/button';
+import { User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Sidebar = () => {
   const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
+  const navigate = useNavigate();
 
   return (
-    <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md">
+    <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
       <CardHeader className="pb-4">
         <CardTitle className="text-xl font-semibold text-sidebar-foreground">Filtres</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 flex-1">
         <div>
           <label className="block text-sm font-medium text-sidebar-foreground mb-2">Statut</label>
           <Select onValueChange={setStatusFilter} value={statusFilter}>
@@ -58,6 +62,16 @@ const Sidebar = () => {
           </Select>
         </div>
       </CardContent>
+      <div className="p-4 border-t border-sidebar-border">
+        <Button
+          variant="outline"
+          className="w-full justify-start rounded-full"
+          onClick={() => navigate('/profile')}
+        >
+          <User className="mr-2 h-4 w-4" />
+          Mon Profil
+        </Button>
+      </div>
     </Card>
   );
 };

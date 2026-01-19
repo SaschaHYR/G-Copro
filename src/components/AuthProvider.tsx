@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Timeout maximum pour les opérations d'authentification (10 secondes)
   const AUTH_TIMEOUT = 10000;
@@ -59,6 +61,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return fetchWithTimeout;
+  };
+
+  const login = async (email: string, password: string) => {
+    console.log('[AuthProvider] Attempting login for:', email);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('[AuthProvider] Login error:', error);
+        throw error;
+      }
+
+      console.log('[AuthProvider] Login successful, session:', data.session);
+      // Le listener onAuthStateChange va gérer la mise à jour de l'utilisateur
+    } catch (err: any) {
+      console.error('[AuthProvider] Login failed:', err.message);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    console.log('[AuthProvider] Attempting logout');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[AuthProvider] Logout error:', error);
+        throw error;
+      }
+      console.log('[AuthProvider] Logout successful');
+      setUser(null);
+      navigate('/login');
+    } catch (err: any) {
+      console.error('[AuthProvider] Logout failed:', err.message);
+      throw err;
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    console.log('[AuthProvider] Attempting signup for:', email);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      if (error) {
+        console.error('[AuthProvider] Signup error:', error);
+        throw error;
+      }
+
+      console.log('[AuthProvider] Signup successful, user:', data.user);
+
+      // Create user profile in user_informations table
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('user_informations')
+          .insert({
+            id: data.user.id,
+            username: email,
+            role: 'En attente',
+            actif: true,
+            first_name: '',
+            last_name: '',
+            copro: null
+          });
+
+        if (profileError) {
+          console.error('[AuthProvider] Profile creation error:', profileError);
+          // Even if profile creation fails, the auth signup succeeded
+        }
+      }
+
+      // Le listener onAuthStateChange va gérer la mise à jour de l'utilisateur
+    } catch (err: any) {
+      console.error('[AuthProvider] Signup failed:', err.message);
+      throw err;
+    }
   };
 
   useEffect(() => {

@@ -19,7 +19,7 @@ export const useTickets = () => {
 
     let query = supabase
       .from('tickets')
-      .select('*, createur:user_informations!createur_id(first_name, last_name), cloture_par_user:user_informations!cloture_par(first_name, last_name)'); // Updated table name
+      .select('*, createur:user_informations!createur_id(first_name, last_name), cloture_par_user:user_informations!cloture_par(first_name, last_name)');
 
     // Apply role-based filtering
     if (user.role === 'Proprietaire') {
@@ -63,6 +63,8 @@ export const useTickets = () => {
     queryKey: ['tickets', user?.id, statusFilter, coproFilter, periodFilter],
     queryFn: fetchTickets,
     enabled: !!user, // Only run query if user is authenticated
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2, // Only retry twice before giving up
   });
 
   const invalidateTickets = () => {

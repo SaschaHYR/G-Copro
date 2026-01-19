@@ -20,16 +20,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const fetchUser = async () => {
       try {
+        // Set a timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          setLoading(false);
+          setError('Timeout: Unable to fetch user data');
+        }, 10000); // 10 seconds timeout
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session) {
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from('user_informations')
             .select('*')
             .eq('id', session.user.id)
             .single();
+
+          if (userError) {
+            throw userError;
+          }
 
           if (userData) {
             setUser(userData);
@@ -39,6 +51,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching user:', err);
         setError('Failed to fetch user data');
       } finally {
+        // Clear timeout if request completes before timeout
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         setLoading(false);
       }
     };
@@ -48,11 +64,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
         try {
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from('user_informations')
             .select('*')
             .eq('id', session.user.id)
             .single();
+
+          if (userError) {
+            throw userError;
+          }
 
           if (userData) {
             setUser(userData);
@@ -68,6 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       authListener.subscription.unsubscribe();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, []);
 
@@ -86,11 +109,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        const { data: userData } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('user_informations')
           .select('*')
           .eq('id', data.user.id)
           .single();
+
+        if (userError) {
+          throw userError;
+        }
 
         if (userData) {
           setUser(userData);

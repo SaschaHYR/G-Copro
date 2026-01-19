@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // Removed useEffect as it's no longer needed for fetching names
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
 import { Ticket } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+// Removed supabase import as direct fetching is no longer needed
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -15,45 +15,11 @@ interface TicketDetailModalProps {
 
 const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const [open, setOpen] = useState(false);
-  const [creatorName, setCreatorName] = useState('Chargement...');
-  const [closerName, setCloserName] = useState('N/A');
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchUserNames = async () => {
-      if (ticket.createur_id) {
-        const { data: creatorData, error: creatorError } = await supabase
-          .from('user_informations') // Fetch from new table
-          .select('first_name, last_name')
-          .eq('id', ticket.createur_id)
-          .single();
-        if (creatorData) {
-          setCreatorName(`${creatorData.first_name || ''} ${creatorData.last_name || ''}`.trim());
-        } else if (creatorError) {
-          console.error("Error fetching creator name:", creatorError);
-          setCreatorName('Inconnu');
-        }
-      }
-
-      if (ticket.cloture_par) {
-        const { data: closerData, error: closerError } = await supabase
-          .from('user_informations') // Fetch from new table
-          .select('first_name, last_name')
-          .eq('id', ticket.cloture_par)
-          .single();
-        if (closerData) {
-          setCloserName(`${closerData.first_name || ''} ${closerData.last_name || ''}`.trim());
-        } else if (closerError) {
-          console.error("Error fetching closer name:", closerError);
-          setCloserName('Inconnu');
-        }
-      }
-    };
-
-    if (open) {
-      fetchUserNames();
-    }
-  }, [open, ticket.createur_id, ticket.cloture_par]);
+  // Directly use the joined user data from the ticket prop
+  const creatorName = ticket.createur ? `${ticket.createur.first_name || ''} ${ticket.createur.last_name || ''}`.trim() : 'Inconnu';
+  const closerName = ticket.cloture_par_user ? `${ticket.cloture_par_user.first_name || ''} ${ticket.cloture_par_user.last_name || ''}`.trim() : 'N/A';
 
   const handleClose = () => {
     toast({

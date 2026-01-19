@@ -28,9 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isProduction = !isLocalhost;
 
   // Timeouts adaptés à l'environnement
-  const AUTH_TIMEOUT = isLocalhost ? 15000 : 10000; // Reduced from 60s/30s to 15s/10s
-  const SESSION_TIMEOUT = isLocalhost ? 10000 : 5000; // Reduced from 45s/15s to 10s/5s
-  const MAX_RETRIES = 2; // Keep max retries at 2
+  const AUTH_TIMEOUT = isLocalhost ? 15000 : 10000;
+  const SESSION_TIMEOUT = isLocalhost ? 10000 : 5000;
+  const MAX_RETRIES = 2;
 
   // Track active timeouts to clear them
   const [activeTimeouts, setActiveTimeouts] = useState<NodeJS.Timeout[]>([]);

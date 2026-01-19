@@ -36,13 +36,13 @@ export const useTickets = () => {
     }
 
     // Apply additional filters from sidebar
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== 'all') {
       query = query.eq('status', statusFilter);
     }
-    if (coproFilter) {
+    if (coproFilter && coproFilter !== 'all') {
       query = query.eq('copro', coproFilter);
     }
-    if (periodFilter) {
+    if (periodFilter && periodFilter !== 'all') {
       const now = new Date();
       const days = parseInt(periodFilter);
       if (!isNaN(days)) {

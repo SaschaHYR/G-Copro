@@ -20,7 +20,7 @@ const Sidebar = () => {
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
-              <SelectItem value="">Tous</SelectItem>
+              <SelectItem value="all">Tous</SelectItem>
               <SelectItem value="ouvert">Ouvert</SelectItem>
               <SelectItem value="en cours">En cours</SelectItem>
               <SelectItem value="transmis">Transmis</SelectItem>
@@ -35,7 +35,7 @@ const Sidebar = () => {
               <SelectValue placeholder="Copropriété" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
-              <SelectItem value="">Toutes</SelectItem>
+              <SelectItem value="all">Toutes</SelectItem>
               <SelectItem value="A">Bâtiment A</SelectItem>
               <SelectItem value="B">Bâtiment B</SelectItem>
               <SelectItem value="C">Bâtiment C</SelectItem>
@@ -50,7 +50,7 @@ const Sidebar = () => {
               <SelectValue placeholder="Période" />
             </SelectTrigger>
             <SelectContent className="rounded-md">
-              <SelectItem value="">Toutes</SelectItem>
+              <SelectItem value="all">Toutes</SelectItem>
               <SelectItem value="7">7 jours</SelectItem>
               <SelectItem value="30">30 jours</SelectItem>
               <SelectItem value="90">90 jours</SelectItem>

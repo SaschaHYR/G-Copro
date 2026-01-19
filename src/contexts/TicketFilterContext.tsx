@@ -14,9 +14,9 @@ interface TicketFilterContextType {
 const TicketFilterContext = createContext<TicketFilterContextType | undefined>(undefined);
 
 export const TicketFilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [statusFilter, setStatusFilter] = useState('');
-  const [coproFilter, setCoproFilter] = useState('');
-  const [periodFilter, setPeriodFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [coproFilter, setCoproFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
 
   return (
     <TicketFilterContext.Provider

@@ -21,10 +21,11 @@ const LoginForm = () => {
     try {
       await login(email, password);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Erreur de connexion",
-        description: "Email ou mot de passe incorrect",
+        description: error.message || "Email ou mot de passe incorrect",
         variant: "destructive",
       });
     }

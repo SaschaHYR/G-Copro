@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
+    let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const initializeAuth = async () => {
       try {
@@ -94,31 +95,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
 
     // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session) {
-          try {
-            const userData = await fetchUserData(session.user.id);
-            if (userData) {
-              setUser(userData);
-            } else {
+    const setupAuthListener = () => {
+      authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session) {
+            try {
+              const userData = await fetchUserData(session.user.id);
+              if (userData) {
+                setUser(userData);
+              } else {
+                await supabase.auth.signOut();
+                setUser(null);
+              }
+            } catch (userError) {
+              console.error('User data error on auth state change:', userError);
               await supabase.auth.signOut();
               setUser(null);
             }
-          } catch (userError) {
-            console.error('User data error on auth state change:', userError);
-            await supabase.auth.signOut();
-            setUser(null);
           }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
+      });
+    };
+
+    setupAuthListener();
 
     return () => {
       isMounted = false;
-      authListener.subscription.unsubscribe();
+      if (authListener) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 

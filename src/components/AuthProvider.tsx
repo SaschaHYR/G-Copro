@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { createClient } from '@supabase/supabase-js'; // Ajout de l'import manquant
 import { User } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,68 +19,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   // Configuration adaptée pour le développement local
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  const MAX_RETRIES = 3;
 
-  // Timeouts adaptés à l'environnement
-  const AUTH_TIMEOUT = isLocalhost ? 60000 : 30000; // 60s en localhost, 30s en production
-  const SESSION_TIMEOUT = isLocalhost ? 45000 : 15000; // 45s en localhost, 15s en production
-  const RETRY_DELAY = 5000; // 5 secondes entre les tentatives
+  // Timeouts très généreux pour localhost
+  const AUTH_TIMEOUT = isLocalhost ? 120000 : 30000; // 2 minutes en localhost
+  const SESSION_TIMEOUT = isLocalhost ? 60000 : 15000; // 1 minute en localhost
 
-  const fetchUserData = async (userId: string, attempt = 1): Promise<User | null> => {
-    console.log(`[AuthProvider] Attempt ${attempt}: Fetching user data for ID:`, userId);
+  const fetchUserData = async (userId: string): Promise<User | null> => {
+    console.log('[AuthProvider] Fetching user data for ID:', userId);
 
-    return new Promise(async (resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        if (attempt < MAX_RETRIES) {
-          console.warn(`[AuthProvider] Timeout on attempt ${attempt}, retrying...`);
-          fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
-        } else {
-          reject(new Error(`Timeout: Unable to fetch user data after ${MAX_RETRIES} attempts`));
-        }
-      }, AUTH_TIMEOUT);
+    try {
+      // Timeout très long pour localhost
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), AUTH_TIMEOUT);
 
-      try {
-        const { data, error } = await supabase
-          .from('user_informations')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from('user_informations')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+        .abortSignal(controller.signal);
 
-        clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-        if (error) {
-          console.error('[AuthProvider] User data fetch error:', error);
-          reject(error);
-          return;
-        }
-
-        if (!data) {
-          console.warn('[AuthProvider] No user data found for ID:', userId);
-          resolve(null);
-          return;
-        }
-
-        console.log('[AuthProvider] User data fetched successfully:', data);
-        resolve(data);
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        console.error('[AuthProvider] Error in fetchUserData:', err.message);
-
-        if (attempt < MAX_RETRIES) {
-          console.log(`[AuthProvider] Retrying fetchUserData (attempt ${attempt + 1}/${MAX_RETRIES})...`);
-          setTimeout(() => {
-            fetchUserData(userId, attempt + 1).then(resolve).catch(reject);
-          }, RETRY_DELAY);
-        } else {
-          reject(new Error(`Failed to fetch user data after ${MAX_RETRIES} attempts: ${err.message}`));
-        }
+      if (error) {
+        console.error('[AuthProvider] User data fetch error:', error);
+        return null;
       }
-    });
+
+      if (!data) {
+        console.warn('[AuthProvider] No user data found for ID:', userId);
+        return null;
+      }
+
+      console.log('[AuthProvider] User data fetched successfully:', data);
+      return data;
+    } catch (err: any) {
+      console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      return null;
+    }
   };
 
   const login = async (email: string, password: string) => {
@@ -189,63 +168,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Configuration spécifique pour localhost
         if (isLocalhost) {
-          console.log('[AuthProvider] Detected localhost environment, adjusting settings...');
-          // Configuration spécifique pour améliorer la stabilité en localhost
-          // Utiliser le client supabase existant plutôt que d'en créer un nouveau
-          console.log('[AuthProvider] Using existing supabase client with localhost optimizations');
+          console.log('[AuthProvider] Detected localhost environment, using extended timeouts...');
         }
 
-        // Vérification de session avec réessais
-        const checkSessionWithRetry = async (attempt = 1): Promise<any> => {
-          return new Promise(async (resolve, reject) => {
-            const sessionTimeout = setTimeout(() => {
-              if (attempt < MAX_RETRIES) {
-                console.warn(`[AuthProvider] Session check timeout (attempt ${attempt}), retrying...`);
-                checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
-              } else {
-                reject(new Error(`Timeout: Session check failed after ${MAX_RETRIES} attempts`));
-              }
-            }, SESSION_TIMEOUT);
+        // Vérification de session avec timeout très long
+        const sessionCheck = new Promise(async (resolve, reject) => {
+          const sessionTimeout = setTimeout(() => {
+            reject(new Error('Timeout: Session check took too long'));
+          }, SESSION_TIMEOUT);
 
-            try {
-              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-              clearTimeout(sessionTimeout);
+          try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            clearTimeout(sessionTimeout);
 
-              if (sessionError) {
-                console.error(`[AuthProvider] Session error (attempt ${attempt}):`, sessionError);
-                if (attempt < MAX_RETRIES) {
-                  setTimeout(() => {
-                    checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
-                  }, RETRY_DELAY);
-                } else {
-                  reject(sessionError);
-                }
-                return;
-              }
-
-              console.log('[AuthProvider] Session check successful:', session);
-              resolve(session);
-            } catch (err) {
-              clearTimeout(sessionTimeout);
-              if (attempt < MAX_RETRIES) {
-                setTimeout(() => {
-                  checkSessionWithRetry(attempt + 1).then(resolve).catch(reject);
-                }, RETRY_DELAY);
-              } else {
-                reject(err);
-              }
+            if (sessionError) {
+              console.error('[AuthProvider] Session error during initialization:', sessionError);
+              reject(sessionError);
+              return;
             }
-          });
-        };
 
-        const session = await checkSessionWithRetry();
+            console.log('[AuthProvider] Supabase session check complete. Session:', session);
+            resolve(session);
+          } catch (err) {
+            clearTimeout(sessionTimeout);
+            reject(err);
+          }
+        });
+
+        const session = await sessionCheck;
 
         if (session) {
           try {
             const userData = await fetchUserData(session.user.id);
             if (userData) {
               setUser(userData);
-              setError(null);
             } else {
               console.warn('[AuthProvider] User not found in database after session, signing out.');
               await supabase.auth.signOut();

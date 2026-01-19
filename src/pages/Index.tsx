@@ -1,15 +1,20 @@
-// Update this page (the content is just a fallback if you fail to update the page)
-
 import { MadeWithDyad } from "@/components/made-with-dyad";
+import Sidebar from "@/components/Sidebar";
+import TicketDataTable from "@/components/TicketDataTable";
+import NewTicketModal from "@/components/NewTicketModal";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">
-          Start building your amazing project here!
-        </p>
+    <div className="min-h-screen bg-gray-100">
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Gestion des Tickets</h1>
+            <NewTicketModal />
+          </div>
+          <TicketDataTable />
+        </div>
       </div>
       <MadeWithDyad />
     </div>

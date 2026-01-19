@@ -19,16 +19,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchUserData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_informations')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('User data fetch error:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error in fetchUserData:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        // Check if we're in a browser environment
         if (typeof window === 'undefined') {
           setLoading(false);
           return;
         }
 
-        // Get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -37,22 +55,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (session) {
-          // Fetch user data from the database
-          const { data: userData, error: userError } = await supabase
-            .from('user_informations')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (userError) {
+          try {
+            const userData = await fetchUserData(session.user.id);
+            if (userData) {
+              setUser(userData);
+            } else {
+              // User not found in database, sign out
+              await supabase.auth.signOut();
+              setUser(null);
+            }
+          } catch (userError) {
             console.error('User data error:', userError);
-            throw userError;
-          }
-
-          if (userData) {
-            setUser(userData);
-          } else {
-            // User not found in database, sign out
             await supabase.auth.signOut();
             setUser(null);
           }
@@ -62,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err) {
         console.error('Error fetching user:', err);
         setError('Failed to fetch user data. Please check your network connection.');
-        // Sign out if there's an error to ensure clean state
         try {
           await supabase.auth.signOut();
         } catch (signOutError) {
@@ -76,26 +88,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchUser();
 
-    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         try {
           if (session) {
-            const { data: userData, error: userError } = await supabase
-              .from('user_informations')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (userError) {
+            try {
+              const userData = await fetchUserData(session.user.id);
+              if (userData) {
+                setUser(userData);
+              } else {
+                await supabase.auth.signOut();
+                setUser(null);
+              }
+            } catch (userError) {
               console.error('User data error on auth state change:', userError);
-              throw userError;
-            }
-
-            if (userData) {
-              setUser(userData);
-            } else {
-              // User not found in database, sign out
               await supabase.auth.signOut();
               setUser(null);
             }
@@ -125,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
 
     try {
-      // Check network connectivity
       if (!navigator.onLine) {
         throw new Error('No internet connection');
       }
@@ -141,23 +146,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        const { data: userData, error: userError } = await supabase
-          .from('user_informations')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (userError) {
+        try {
+          const userData = await fetchUserData(data.user.id);
+          if (userData) {
+            setUser(userData);
+          } else {
+            await supabase.auth.signOut();
+            throw new Error('User not found in database');
+          }
+        } catch (userError) {
           console.error('User data error after login:', userError);
-          throw userError;
-        }
-
-        if (userData) {
-          setUser(userData);
-        } else {
-          // User not found in database, sign out
           await supabase.auth.signOut();
-          throw new Error('User not found in database');
+          throw userError;
         }
       }
     } catch (error: any) {
@@ -190,7 +190,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
 
     try {
-      // Check network connectivity
       if (!navigator.onLine) {
         throw new Error('No internet connection');
       }

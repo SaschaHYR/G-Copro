@@ -10,7 +10,7 @@ This application uses Supabase with Row Level Security (RLS) policies to protect
 
 1. **Row Level Security (RLS)**: All database tables have comprehensive RLS policies that restrict access based on user roles and ownership.
 
-2. **Environment Variables**: The application supports environment variables for configuration. Create a `.env` file based on `.env.example` for production deployments.
+2. **Environment Variables**: The application now properly uses environment variables for configuration. Create a `.env` file based on `.env.example` for production deployments.
 
 3. **JWT Token Management**: Automatic token refresh and secure session management.
 
@@ -19,7 +19,11 @@ This application uses Supabase with Row Level Security (RLS) policies to protect
 ### Setting Up Environment Variables
 
 1. Copy `.env.example` to `.env`
-2. Add your Supabase URL and publishable key
+2. Add your Supabase URL and publishable key:
+   ```
+   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+   ```
 3. Configure any additional environment variables as needed
 
 ### Important Security Notes:

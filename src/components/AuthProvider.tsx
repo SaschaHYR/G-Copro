@@ -42,7 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
-    let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const fetchUser = async () => {
       try {
@@ -103,53 +102,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchUser();
 
-    // Set up auth listener
-    const setupAuthListener = () => {
-      authListener = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          try {
-            if (session) {
-              try {
-                const userData = await fetchUserData(session.user.id);
-                if (userData && isMounted) {
-                  setUser(userData);
-                } else if (isMounted) {
-                  await supabase.auth.signOut();
-                  setUser(null);
-                }
-              } catch (userError) {
-                console.error('User data error on auth state change:', userError);
-                if (isMounted) {
-                  await supabase.auth.signOut();
-                  setUser(null);
-                }
-              }
-            }
-          } catch (err) {
-            console.error('Error on auth state change:', err);
-            if (isMounted) {
-              setError('Failed to update user data');
-              try {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        try {
+          if (session) {
+            try {
+              const userData = await fetchUserData(session.user.id);
+              if (userData && isMounted) {
+                setUser(userData);
+              } else if (isMounted) {
                 await supabase.auth.signOut();
-              } catch (signOutError) {
-                console.error('Error signing out:', signOutError);
+                setUser(null);
               }
-              setUser(null);
+            } catch (userError) {
+              console.error('User data error on auth state change:', userError);
+              if (isMounted) {
+                await supabase.auth.signOut();
+                setUser(null);
+              }
             }
           }
-        } else if (event === 'SIGNED_OUT' && isMounted) {
-          setUser(null);
+        } catch (err) {
+          console.error('Error on auth state change:', err);
+          if (isMounted) {
+            setError('Failed to update user data');
+            try {
+              await supabase.auth.signOut();
+            } catch (signOutError) {
+              console.error('Error signing out:', signOutError);
+            }
+            setUser(null);
+          }
         }
-      });
-    };
-
-    setupAuthListener();
+      } else if (event === 'SIGNED_OUT' && isMounted) {
+        setUser(null);
+      }
+    });
 
     return () => {
       isMounted = false;
-      if (authListener) {
-        authListener.subscription.unsubscribe();
-      }
+      authListener.subscription.unsubscribe();
     };
   }, []);
 

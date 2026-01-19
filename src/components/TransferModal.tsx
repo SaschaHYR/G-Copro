@@ -13,11 +13,11 @@ import { UserRole } from '@/types';
 
 interface TransferModalProps {
   ticketId: string;
-  currentDestinataireRole: UserRole; // Ajout de cette prop
+  currentDestinataireRole: UserRole; // This prop is still needed for the interface, but not directly used in the component's logic
   onTransferSuccess: () => void; // Callback to refresh ticket list
 }
 
-const TransferModal: React.FC<TransferModalProps> = ({ ticketId, currentDestinataireRole, onTransferSuccess }) => {
+const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSuccess }) => { // Removed currentDestinataireRole from destructuring
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');

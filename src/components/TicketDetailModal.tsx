@@ -23,12 +23,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     const fetchUserNames = async () => {
       if (ticket.createur_id) {
         const { data: creatorData, error: creatorError } = await supabase
-          .from('users')
+          .from('user_informations') // Fetch from new table
           .select('first_name, last_name')
           .eq('id', ticket.createur_id)
           .single();
         if (creatorData) {
-          setCreatorName(`${creatorData.first_name} ${creatorData.last_name}`);
+          setCreatorName(`${creatorData.first_name || ''} ${creatorData.last_name || ''}`.trim());
         } else if (creatorError) {
           console.error("Error fetching creator name:", creatorError);
           setCreatorName('Inconnu');
@@ -37,12 +37,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
 
       if (ticket.cloture_par) {
         const { data: closerData, error: closerError } = await supabase
-          .from('users')
+          .from('user_informations') // Fetch from new table
           .select('first_name, last_name')
           .eq('id', ticket.cloture_par)
           .single();
         if (closerData) {
-          setCloserName(`${closerData.first_name} ${closerData.last_name}`);
+          setCloserName(`${closerData.first_name || ''} ${closerData.last_name || ''}`.trim());
         } else if (closerError) {
           console.error("Error fetching closer name:", closerError);
           setCloserName('Inconnu');

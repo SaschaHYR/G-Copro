@@ -19,7 +19,7 @@ export const useTickets = () => {
 
     let query = supabase
       .from('tickets')
-      .select('*, createur:users!createur_id(first_name, last_name), cloture_par_user:users!cloture_par(first_name, last_name)');
+      .select('*, createur:user_informations!createur_id(first_name, last_name), cloture_par_user:user_informations!cloture_par(first_name, last_name)'); // Updated table name
 
     // Apply role-based filtering
     if (user.role === 'Proprietaire') {

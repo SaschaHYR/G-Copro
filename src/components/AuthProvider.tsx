@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string, copro: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>; // firstName, lastName, copro removed
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
         const { data: userData } = await supabase
-          .from('users')
+          .from('user_informations') // Fetch from new table
           .select('*')
           .eq('id', session.user.id)
           .single();
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (data.user) {
       const { data: userData } = await supabase
-        .from('users')
+        .from('user_informations') // Fetch from new table
         .select('*')
         .eq('id', data.user.id)
         .single();
@@ -69,8 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string, copro: string) => {
-    const { data, error } = await supabase.auth.signUp({
+  const signUp = async (email: string, password: string) => { // firstName, lastName, copro removed
+    const { error } = await supabase.auth.signUp({ // Removed 'data' as it's not used
       email,
       password,
     });
@@ -79,22 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
 
-    if (data.user) {
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          username: email,
-          role: 'En attente',
-          copro,
-          first_name: firstName,
-          last_name: lastName,
-        });
-
-      if (insertError) {
-        throw insertError;
-      }
-    }
+    // The handle_new_user trigger will automatically insert into user_informations
+    // with default values for role, actif, and NULL for first_name, last_name, copro.
+    // No explicit insert here is needed for user_informations.
   };
 
   return (

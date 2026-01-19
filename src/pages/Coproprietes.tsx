@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 interface Copropriete {
   id: string;
@@ -172,7 +173,7 @@ const Coproprietes = () => {
                 <Checkbox
                   id="actif"
                   checked={newCopropriete.actif}
-                  onCheckedChange={(checked) => setNewCopropriete({...newCopropriete, actif: checked as boolean})}
+                  onCheckedChange={(checked: boolean) => setNewCopropriete({...newCopropriete, actif: checked})}
                 />
                 <Label htmlFor="actif" className="text-sm font-medium text-foreground">
                   Active

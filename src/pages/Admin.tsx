@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { User, UserRole } from '@/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
 import { Building } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -198,7 +199,7 @@ const Admin = () => {
                 <Checkbox
                   id="actif"
                   checked={editingUser.actif}
-                  onCheckedChange={(checked) => setEditingUser({...editingUser, actif: checked as boolean})}
+                  onCheckedChange={(checked: boolean) => setEditingUser({...editingUser, actif: checked})}
                 />
                 <Label htmlFor="actif" className="text-sm font-medium text-foreground">
                   Compte actif

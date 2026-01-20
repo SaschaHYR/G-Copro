@@ -20,7 +20,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [degradedMode, setDegradedMode] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
 
   // Configuration adaptée pour le développement local
@@ -146,24 +145,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Single useEffect for initialization
+  // Single useEffect for initialization and auth state changes
   useEffect(() => {
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
-      setLoading(true);
+      setLoading(true); // Set loading true at the very start of initialization
       setError(null);
 
       try {
         if (typeof window === 'undefined') {
           console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
-          if (isMounted) {
-            setLoading(false);
-            setAuthInitialized(true);
-          }
-          return;
+          return; // Exit early for SSR
         }
 
         console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
@@ -221,8 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } finally {
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
-          setLoading(false);
-          setAuthInitialized(true);
+          setLoading(false); // Ensure loading is set to false here
         }
       }
     };
@@ -273,11 +267,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authListener = listenerData;
     };
 
-    // Only initialize if not already initialized
-    if (!authInitialized) {
-      initializeAuth();
-      setupAuthListener();
-    }
+    initializeAuth();
+    setupAuthListener();
 
     return () => {
       console.log('[AuthProvider] Cleaning up...');
@@ -287,9 +278,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [authInitialized, fetchUserData, isProduction, navigate]);
+  }, [fetchUserData, isProduction]); // Dependencies for useEffect
 
-  if (loading && !authInitialized) {
+  if (loading) { // Simplified loading check
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

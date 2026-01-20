@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { Home, Edit, Save, X } from 'lucide-react';
 
 const Profile = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUserProfile } = useAuth(); // Destructure refreshUserProfile
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -71,6 +71,7 @@ const Profile = () => {
         description: "Vos informations ont été mises à jour avec succès.",
       });
 
+      await refreshUserProfile(); // Call to refresh the global user state
       setIsEditing(false);
     } catch (error: any) {
       toast({

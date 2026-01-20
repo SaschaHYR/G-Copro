@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  refreshUserProfile: () => Promise<void>; // Added this function
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -132,18 +133,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUserProfile = useCallback(async () => {
+    setLoading(true); // Indicate loading while refreshing
+    try {
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+
+      if (authUser) {
+        const userData = await fetchUserData(authUser.id);
+        if (userData) {
+          setUser(userData);
+          console.log('[AuthProvider] User profile refreshed:', userData);
+        } else {
+          console.warn('[AuthProvider] Failed to refresh user profile: No user data found.');
+          setUser(null);
+        }
+      } else {
+        console.warn('[AuthProvider] Failed to refresh user profile: No authenticated user.');
+        setUser(null);
+      }
+    } catch (error: any) {
+      console.error('[AuthProvider] Error refreshing user profile:', error.message);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUserData]);
+
   useEffect(() => {
     console.log('[AuthProvider] Setting up auth listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[AuthProvider] Auth state changed: ${event}`, session?.user?.id);
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) { // Added USER_UPDATED event
         const userData = await fetchUserData(session.user.id);
         if (userData) {
           setUser(userData);
-          console.log('[AuthProvider] User signed in and data loaded:', userData);
+          console.log('[AuthProvider] User signed in/updated and data loaded:', userData);
         } else {
-          console.warn('[AuthProvider] User signed in but no data found');
+          console.warn('[AuthProvider] User signed in/updated but no data found');
           setUser(null);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -151,8 +179,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('[AuthProvider] User signed out');
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('[AuthProvider] Token refreshed');
-      } else if (event === 'USER_UPDATED') {
-        console.log('[AuthProvider] User updated');
       }
     });
 
@@ -191,6 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     signUp,
+    refreshUserProfile, // Expose the new function
   };
 
   return (

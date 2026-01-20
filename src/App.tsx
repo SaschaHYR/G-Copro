@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import AdminRoute from "./components/AdminRoute";
 import Coproprietes from "./pages/Coproprietes";
+import Categories from "./pages/Categories"; // Import the new Categories page
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/coproprietes" element={<AdminRoute><Coproprietes /></AdminRoute>} />
+            <Route path="/categories" element={<AdminRoute><Categories /></AdminRoute>} /> {/* New route for Categories */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

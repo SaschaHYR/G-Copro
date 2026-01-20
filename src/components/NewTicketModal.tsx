@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,7 +11,7 @@ import { useToast } from './ui/use-toast';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Ticket, UserRole } from '@/types';
-import { useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
+import { useQueryClient, useQuery } from '@tanstack/react-query'; // Import useQuery
 
 const NewTicketModal = () => {
   const [open, setOpen] = useState(false);
@@ -24,7 +24,53 @@ const NewTicketModal = () => {
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient(); // Initialize useQueryClient
+  const queryClient = useQueryClient();
+
+  // Fetch categories dynamically
+  const { data: categories, isLoading: isLoadingCategories, error: categoriesError } = useQuery<
+    { id: string; name: string }[],
+    Error
+  >({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('id, name').order('name', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch coproprietes dynamically
+  const { data: coproprietes, isLoading: isLoadingCoproprietes, error: coproprietesError } = useQuery<
+    { id: string; nom: string }[],
+    Error
+  >({
+    queryKey: ['coproprietes_list'], // Use a distinct key for coproprietes
+    queryFn: async () => {
+      const { data, error } = await supabase.from('coproprietes').select('id, nom').order('nom', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  useEffect(() => {
+    if (categoriesError) {
+      toast({
+        title: "Erreur de chargement des catégories",
+        description: categoriesError.message,
+        variant: "destructive",
+      });
+    }
+    if (coproprietesError) {
+      toast({
+        title: "Erreur de chargement des copropriétés",
+        description: coproprietesError.message,
+        variant: "destructive",
+      });
+    }
+  }, [categoriesError, coproprietesError, toast]);
+
 
   const generateUniqueTicketId = () => {
     const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
@@ -108,31 +154,39 @@ const NewTicketModal = () => {
           </div>
           <div>
             <Label htmlFor="categorie" className="text-sm font-medium text-foreground">Catégorie</Label>
-            <Select onValueChange={setCategorie} value={categorie} required>
+            <Select onValueChange={setCategorie} value={categorie} required disabled={isLoadingCategories}>
               <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
                 <SelectValue placeholder="Sélectionner une catégorie" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                <SelectItem value="Chauffage">Chauffage</SelectItem>
-                <SelectItem value="Eau">Eau</SelectItem>
-                <SelectItem value="Ascenseur">Ascenseur</SelectItem>
-                <SelectItem value="Communs">Communs</SelectItem>
-                <SelectItem value="Urgent">Urgent</SelectItem>
-                <SelectItem value="Autre">Autre</SelectItem>
+                {isLoadingCategories ? (
+                  <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                ) : (
+                  categories?.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-            <Select onValueChange={setCopro} value={copro} required>
+            <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
               <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
                 <SelectValue placeholder="Sélectionner une copropriété" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                <SelectItem value="A">Bâtiment A</SelectItem>
-                <SelectItem value="B">Bâtiment B</SelectItem>
-                <SelectItem value="C">Bâtiment C</SelectItem>
-                <SelectItem value="D">Bâtiment D</SelectItem>
+                {isLoadingCoproprietes ? (
+                  <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                ) : (
+                  coproprietes?.map((c) => (
+                    <SelectItem key={c.id} value={c.nom}>
+                      {c.nom}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
-import { Building } from 'lucide-react';
+import { Building, ListChecks } from 'lucide-react'; // Import ListChecks icon
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Admin = () => {
@@ -85,12 +85,20 @@ const Admin = () => {
     <div className="min-h-screen flex flex-col bg-background p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-foreground">Panneau d'administration</h1>
-        <Link to="/coproprietes">
-          <Button variant="outline" className="rounded-full">
-            <Building className="mr-2 h-4 w-4" />
-            Gérer les copropriétés
-          </Button>
-        </Link>
+        <div className="flex space-x-2">
+          <Link to="/coproprietes">
+            <Button variant="outline" className="rounded-full">
+              <Building className="mr-2 h-4 w-4" />
+              Gérer les copropriétés
+            </Button>
+          </Link>
+          <Link to="/categories">
+            <Button variant="outline" className="rounded-full">
+              <ListChecks className="mr-2 h-4 w-4" />
+              Gérer les catégories
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="rounded-lg shadow-lg">

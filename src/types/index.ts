@@ -4,9 +4,9 @@ export interface User {
   id: string;
   username: string;
   role: UserRole;
-  copro: string;
-  first_name: string;
-  last_name: string;
+  copro: string | null; // Changed to allow null
+  first_name: string | null; // Changed to allow null
+  last_name: string | null; // Changed to allow null
   actif: boolean;
 }
 
@@ -22,9 +22,9 @@ export interface Ticket {
   status: 'ouvert' | 'en cours' | 'transmis' | 'cloture';
   priorite: string;
   date_create: string;
-  date_update: string;
-  cloture_par: string;
-  cloture_date: string;
+  date_update: string | null; // Changed to allow null
+  cloture_par: string | null; // Changed to allow null
+  cloture_date: string | null; // Changed to allow null
   pieces_jointes: string[];
   // Add the joined user data
   createur?: Pick<User, 'first_name' | 'last_name'>;

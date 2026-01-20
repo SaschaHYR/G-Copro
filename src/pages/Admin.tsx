@@ -238,15 +238,15 @@ const Admin = () => {
               <div>
                 <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
                 <Select
-                  onValueChange={(value) => setEditingUser({...editingUser, copro: value})}
-                  value={editingUser.copro || ''}
+                  onValueChange={(value) => setEditingUser({...editingUser, copro: value === "none" ? null : value})}
+                  value={editingUser.copro || 'none'}
                   disabled={loadingCoproprietes}
                 >
                   <SelectTrigger className="rounded-md border-border bg-background text-foreground">
                     <SelectValue placeholder={loadingCoproprietes ? "Chargement..." : "Sélectionner une copropriété"} />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    <SelectItem value="">Aucune</SelectItem>
+                    <SelectItem value="none">Aucune</SelectItem>
                     {coproprietes.map((copro) => (
                       <SelectItem key={copro.id} value={copro.nom}>
                         {copro.nom}

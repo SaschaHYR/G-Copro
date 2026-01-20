@@ -146,227 +146,235 @@ const NewTicketModal = () => {
 
       if (!destinataire) {
         toast({
-          title: "Champ requis",
-          description: "Le destinataire est obligatoire",
-          variant: "destructive",
-        });
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour créer un ticket.",
+        title: "Champ requis",
+        description: "Le destinataire est obligatoire",
         variant: "destructive",
       });
-      return;
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!validateForm()) {
+    return;
+  }
+
+  if (!user) {
+    toast({
+      title: "Erreur",
+      description: "Vous devez être connecté pour créer un ticket.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // Determine copro and destinataire based on user role
+    let ticketCopro = copro;
+    let ticketDestinataire = destinataire as UserRole;
+
+    if (user.role === 'ASL') {
+      ticketCopro = 'ASL'; // ASL is considered as copro "ASL"
+      ticketDestinataire = 'ASL'; // ASL is always the destinataire
+    } else if (user.role === 'Superadmin') {
+      // Superadmin can select any copro and destinataire
+      ticketCopro = copro;
+      ticketDestinataire = destinataire as UserRole;
+    } else {
+      // For other roles, use the user's copro from their profile
+      ticketCopro = user.copro || copro;
+      ticketDestinataire = destinataire as UserRole;
     }
 
-    setIsSubmitting(true);
+    const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
+      ticket_id_unique: generateUniqueTicketId(),
+      titre,
+      description,
+      categorie,
+      copro: ticketCopro,
+      createur_id: user.id,
+      destinataire_role: ticketDestinataire,
+      status: 'ouvert',
+      priorite,
+      pieces_jointes: piecesJointes.map(file => file.name), // Store file names for now
+    };
 
-    try {
-      // For ASL users, automatically set copro and destinataire
-      let ticketCopro = copro;
-      let ticketDestinataire = destinataire as UserRole;
+    console.log('Creating ticket with data:', newTicket);
 
-      if (user.role === 'ASL') {
-        ticketCopro = 'ASL'; // Set copro to 'ASL' for ASL users
-        ticketDestinataire = 'ASL'; // ASL is always the destinataire
-      }
+    const { data, error } = await supabase.from('tickets').insert([newTicket]);
 
-      const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
-        ticket_id_unique: generateUniqueTicketId(),
-        titre,
-        description,
-        categorie,
-        copro: ticketCopro,
-        createur_id: user.id,
-        destinataire_role: ticketDestinataire,
-        status: 'ouvert',
-        priorite,
-        pieces_jointes: piecesJointes.map(file => file.name), // Store file names for now
-      };
-
-      console.log('Creating ticket with data:', newTicket);
-
-      const { data, error } = await supabase.from('tickets').insert([newTicket]);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Ticket created successfully:', data);
-
-      toast({
-        title: "Ticket créé avec succès",
-        description: `Nouveau ticket: ${titre} (${newTicket.ticket_id_unique})`,
-      });
-      setOpen(false);
-      // Invalidate the 'tickets' query to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
-    } catch (error: any) {
-      console.error('Error creating ticket:', error);
-      toast({
-        title: "Erreur de création de ticket",
-        description: error.message || "Une erreur est survenue lors de la création du ticket",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
     }
-  };
 
-  // Check if user is ASL
-  const isASL = user?.role === 'ASL';
+    console.log('Ticket created successfully:', data);
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Nouveau Ticket</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">Nouveau Ticket</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    toast({
+      title: "Ticket créé avec succès",
+      description: `Nouveau ticket: ${titre} (${newTicket.ticket_id_unique})`,
+    });
+    setOpen(false);
+    // Invalidate the 'tickets' query to refetch the list
+    queryClient.invalidateQueries({ queryKey: ['tickets'] });
+  } catch (error: any) {
+    console.error('Error creating ticket:', error);
+    toast({
+      title: "Erreur de création de ticket",
+      description: error.message || "Une erreur est survenue lors de la création du ticket",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+// Check if user is ASL
+const isASL = user?.role === 'ASL';
+
+return (
+  <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild>
+      <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Nouveau Ticket</Button>
+    </DialogTrigger>
+    <DialogContent className="sm:max-w-[425px] rounded-lg">
+      <DialogHeader>
+        <DialogTitle className="text-2xl font-bold text-primary">Nouveau Ticket</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="titre" className="text-sm font-medium text-foreground">Titre</Label>
+          <Input
+            id="titre"
+            value={titre}
+            onChange={(e) => setTitre(e.target.value)}
+            required
+            className="rounded-md border-border focus:ring-primary focus:border-primary"
+          />
+        </div>
+        <div>
+          <Label htmlFor="description" className="text-sm font-medium text-foreground">Description</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            className="rounded-md border-border focus:ring-primary focus:border-primary"
+          />
+        </div>
+        <div>
+          <Label htmlFor="categorie" className="text-sm font-medium text-foreground">Catégorie</Label>
+          <Select onValueChange={setCategorie} value={categorie} required disabled={isLoadingCategories}>
+            <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+              <SelectValue placeholder="Sélectionner une catégorie" />
+            </SelectTrigger>
+            <SelectContent className="rounded-md">
+              {isLoadingCategories ? (
+                <SelectItem value="loading" disabled>Chargement...</SelectItem>
+              ) : (
+                categories?.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Only show copro selection if user is not ASL */}
+        {!isASL && (
           <div>
-            <Label htmlFor="titre" className="text-sm font-medium text-foreground">Titre</Label>
-            <Input
-              id="titre"
-              value={titre}
-              onChange={(e) => setTitre(e.target.value)}
-              required
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <Label htmlFor="description" className="text-sm font-medium text-foreground">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <div>
-            <Label htmlFor="categorie" className="text-sm font-medium text-foreground">Catégorie</Label>
-            <Select onValueChange={setCategorie} value={categorie} required disabled={isLoadingCategories}>
+            <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
+            <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
               <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                <SelectValue placeholder="Sélectionner une catégorie" />
+                <SelectValue placeholder="Sélectionner une copropriété" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                {isLoadingCategories ? (
+                {isLoadingCoproprietes ? (
                   <SelectItem value="loading" disabled>Chargement...</SelectItem>
                 ) : (
-                  categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      {cat.name}
+                  coproprietes?.map((c) => (
+                    <SelectItem key={c.id} value={c.nom}>
+                      {c.nom}
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          {/* Only show copro selection if user is not ASL */}
-          {!isASL && (
-            <div>
-              <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-              <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
-                <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                  <SelectValue placeholder="Sélectionner une copropriété" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {isLoadingCoproprietes ? (
-                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
-                  ) : (
-                    coproprietes?.map((c) => (
-                      <SelectItem key={c.id} value={c.nom}>
-                        {c.nom}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        <div>
+          <Label htmlFor="priorite" className="text-sm font-medium text-foreground">Priorité</Label>
+          <Select onValueChange={setPriorite} value={priorite} required>
+            <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+              <SelectValue placeholder="Sélectionner une priorité" />
+            </SelectTrigger>
+            <SelectContent className="rounded-md">
+              <SelectItem value="Faible">Faible</SelectItem>
+              <SelectItem value="Moyenne">Moyenne</SelectItem>
+              <SelectItem value="Haute">Haute</SelectItem>
+              <SelectItem value="Urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
+        {/* Only show destinataire selection if user is not ASL */}
+        {!isASL && (
           <div>
-            <Label htmlFor="priorite" className="text-sm font-medium text-foreground">Priorité</Label>
-            <Select onValueChange={setPriorite} value={priorite} required>
+            <Label htmlFor="destinataire" className="text-sm font-medium text-foreground">Destinataire</Label>
+            <Select onValueChange={(value: UserRole) => setDestinataire(value)} value={destinataire} required>
               <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                <SelectValue placeholder="Sélectionner une priorité" />
+                <SelectValue placeholder="Sélectionner un destinataire" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                <SelectItem value="Faible">Faible</SelectItem>
-                <SelectItem value="Moyenne">Moyenne</SelectItem>
-                <SelectItem value="Haute">Haute</SelectItem>
-                <SelectItem value="Urgent">Urgent</SelectItem>
+                {user?.role === 'Proprietaire' && (
+                  <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                )}
+                {user?.role === 'Conseil_Syndical' && (
+                  <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                )}
+                {user?.role === 'Syndicat_Copropriete' && (
+                  <SelectItem value="ASL">ASL</SelectItem>
+                )}
+                {(user?.role === 'ASL' || user?.role === 'Superadmin') && (
+                  <>
+                    <SelectItem value="Proprietaire">Propriétaire</SelectItem>
+                    <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                    <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                    <SelectItem value="ASL">ASL</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          {/* Only show destinataire selection if user is not ASL */}
-          {!isASL && (
-            <div>
-              <Label htmlFor="destinataire" className="text-sm font-medium text-foreground">Destinataire</Label>
-              <Select onValueChange={(value: UserRole) => setDestinataire(value)} value={destinataire} required>
-                <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                  <SelectValue placeholder="Sélectionner un destinataire" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {user?.role === 'Proprietaire' && (
-                    <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
-                  )}
-                  {user?.role === 'Conseil_Syndical' && (
-                    <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
-                  )}
-                  {user?.role === 'Syndicat_Copropriete' && (
-                    <SelectItem value="ASL">ASL</SelectItem>
-                  )}
-                  {(user?.role === 'ASL' || user?.role === 'Superadmin') && (
-                    <>
-                      <SelectItem value="Proprietaire">Propriétaire</SelectItem>
-                      <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
-                      <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
-                      <SelectItem value="ASL">ASL</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div>
-            <Label htmlFor="piecesJointes" className="text-sm font-medium text-foreground">Pièces jointes</Label>
-            <Input
-              id="piecesJointes"
-              type="file"
-              multiple
-              onChange={(e) => setPiecesJointes(Array.from(e.target.files || []))}
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={isSubmitting}>
-            {isSubmitting ? 'Création en cours...' : 'Créer Ticket'}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+        <div>
+          <Label htmlFor="piecesJointes" className="text-sm font-medium text-foreground">Pièces jointes</Label>
+          <Input
+            id="piecesJointes"
+            type="file"
+            multiple
+            onChange={(e) => setPiecesJointes(Array.from(e.target.files || []))}
+            className="rounded-md border-border focus:ring-primary focus:border-primary"
+          />
+        </div>
+        <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={isSubmitting}>
+          {isSubmitting ? 'Création en cours...' : 'Créer Ticket'}
+        </Button>
+      </form>
+    </DialogContent>
+  </Dialog>
+);
 };
 
 export default NewTicketModal;

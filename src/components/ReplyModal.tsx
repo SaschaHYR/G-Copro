@@ -8,6 +8,7 @@ import { Label } from './ui/label';
 import { useToast } from './ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthProvider';
+import { Input } from './ui/input';
 
 interface ReplyModalProps {
   ticketId: string;
@@ -17,6 +18,7 @@ interface ReplyModalProps {
 const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [photos, setPhotos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -34,11 +36,33 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
     setLoading(true);
 
     try {
+      // Upload photos to Supabase storage
+      let photoUrls: string[] = [];
+      if (photos.length > 0) {
+        const uploadPromises = photos.map(async (photo) => {
+          const fileName = `ticket_${ticketId}_${Date.now()}_${photo.name}`;
+          const { data, error } = await supabase
+            .storage
+            .from('ticket_attachments')
+            .upload(fileName, photo);
+
+          if (error) throw error;
+          return supabase.storage.from('ticket_attachments').getPublicUrl(data.path).data.publicUrl;
+        });
+
+        photoUrls = await Promise.all(uploadPromises);
+      }
+
+      // Insert comment with photo URLs if any
+      const commentMessage = photoUrls.length > 0
+        ? `${message}\n\nPhotos jointes: ${photoUrls.join(', ')}`
+        : message;
+
       // Insert comment
       const { error: commentError } = await supabase.from('commentaires').insert({
         ticket_id: ticketId,
         auteur: user.id,
-        message,
+        message: commentMessage,
         type: 'reponse',
       });
 
@@ -54,10 +78,11 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
 
       toast({
         title: `Réponse au ticket ${ticketId}`,
-        description: "Votre réponse a été envoyée.",
+        description: "Votre réponse a été envoyée avec succès.",
       });
       setOpen(false);
       setMessage('');
+      setPhotos([]);
       onReplySuccess(); // Refresh the ticket list
     } catch (error: any) {
       toast({
@@ -92,6 +117,23 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
               disabled={loading}
               className="rounded-md border-border focus:ring-primary focus:border-primary"
             />
+          </div>
+          <div>
+            <Label htmlFor="photos" className="text-sm font-medium text-foreground">Photos (optionnel)</Label>
+            <Input
+              id="photos"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setPhotos(Array.from(e.target.files || []))}
+              disabled={loading}
+              className="rounded-md border-border focus:ring-primary focus:border-primary"
+            />
+            {photos.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {photos.length} photo(s) sélectionnée(s)
+              </p>
+            )}
           </div>
           <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={loading}>
             {loading ? 'Envoi en cours...' : 'Envoyer'}

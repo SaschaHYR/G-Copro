@@ -108,7 +108,11 @@ const TicketDataTable = () => {
                   <div className="flex space-x-2">
                     <TicketDetailModal ticket={ticket} />
                     <ReplyModal ticketId={ticket.id} onReplySuccess={invalidateTickets} />
-                    <CloseModal ticketId={ticket.id} onCloseSuccess={invalidateTickets} />
+                    <CloseModal
+                      ticketId={ticket.id}
+                      ticketStatus={ticket.status}
+                      onCloseSuccess={invalidateTickets}
+                    />
                     <TransferModal ticketId={ticket.id} currentDestinataireRole={ticket.destinataire_role} onTransferSuccess={invalidateTickets} />
                   </div>
                 </TableCell>

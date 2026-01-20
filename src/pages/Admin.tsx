@@ -29,13 +29,25 @@ const Admin = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      // Use RPC to bypass RLS for Superadmin
       const { data, error } = await supabase
-        .from('user_informations')
+        .rpc('get_all_users_for_admin')
         .select('*')
         .order('username', { ascending: true });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (error) {
+        console.error('Error fetching users with RPC:', error);
+        // Fallback to regular query if RPC fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_informations')
+          .select('*')
+          .order('username', { ascending: true });
+
+        if (fallbackError) throw fallbackError;
+        setUsers(fallbackData || []);
+      } else {
+        setUsers(data || []);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",

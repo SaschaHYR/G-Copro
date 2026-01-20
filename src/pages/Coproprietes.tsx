@@ -33,7 +33,7 @@ interface Copropriete {
 const Coproprietes = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [coproprietes, setCoproprietes] = useState<Copropriete[]>(([]);
+  const [coproprietes, setCoproprietes] = useState<Copropriete[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

@@ -58,7 +58,7 @@ const TicketDataTable = () => {
   return (
     <div className="overflow-x-auto rounded-lg shadow-lg border border-border">
       <Table>
-        <TableHeader className="bg-secondary">
+        <TableHeader className="bg-primary"> {/* Changed from bg-secondary to bg-primary */}
           <TableRow>
             <TableHead className="text-primary-foreground rounded-tl-lg">ID</TableHead>
             <TableHead className="text-primary-foreground">Titre</TableHead>

@@ -17,12 +17,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start true for initial load
   const [error, setError] = useState<string | null>(null);
   const [degradedMode, setDegradedMode] = useState(false);
   const navigate = useNavigate();
 
-  // Configuration adaptée pour le développement local
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
@@ -147,33 +146,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
+    const handleAuthStateChange = async (event: string, session: any | null) => {
+      console.log('[AuthProvider] Auth state change:', event);
+      if (!isMounted) return;
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session) {
+          try {
+            const userData = await fetchUserData(session.user.id);
+            if (userData) {
+              console.log('[AuthProvider] User signed in/refreshed:', userData.username);
+              setUser(userData);
+              setError(null);
+              setDegradedMode(false);
+            } else {
+              console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
+              await supabase.auth.signOut();
+              setUser(null);
+              setError('User profile not found. Please sign up or contact support.');
+            }
+          } catch (userError: any) {
+            console.error('[AuthProvider] Error fetching user data on auth state change:', userError.message);
+            await supabase.auth.signOut();
+            setUser(null);
+            setError(userError.message || 'Failed to load user profile on auth change.');
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('[AuthProvider] User signed out.');
+        setUser(null);
+        setError(null);
+        setDegradedMode(false);
+      }
+      // IMPORTANT: Do NOT set setLoading(false) here. This listener handles *changes* after initial load.
+      // The initial load's setLoading(false) is handled by the initial check.
+    };
+
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
-      setLoading(true); 
+      // setLoading(true) is already set by useState initial value.
       setError(null);
 
       try {
-        // Use supabase.auth.getUser() for a more direct way to get the current user
+        if (typeof window === 'undefined') {
+          console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
+          return;
+        }
+
         const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
 
         if (userError) {
-          console.error('[AuthProvider] Supabase getUser error:', userError);
-          throw userError; 
+          console.error('[AuthProvider] Supabase getUser error during init:', userError);
+          throw userError;
         }
 
         if (supabaseUser) {
-          console.log('[AuthProvider] Active user found, fetching profile data...');
+          console.log('[AuthProvider] Active user found during init, fetching profile data...');
           const userData = await fetchUserData(supabaseUser.id);
 
           if (userData) {
-            console.log('[AuthProvider] User data loaded successfully');
+            console.log('[AuthProvider] User data loaded successfully during init');
             if (isMounted) {
               setUser(userData);
               setError(null);
               setDegradedMode(false);
             }
           } else {
-            console.warn('[AuthProvider] User found in auth.users but not in public.user_informations. Signing out.');
+            console.warn('[AuthProvider] User found in auth.users but not in public.user_informations during init. Signing out.');
             await supabase.auth.signOut();
             if (isMounted) {
               setUser(null);
@@ -181,7 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          console.log('[AuthProvider] No active user found.');
+          console.log('[AuthProvider] No active user found during init.');
           if (isMounted) {
             setUser(null);
             setError(null);
@@ -196,56 +235,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setDegradedMode(true);
         }
       } finally {
-        // This finally block ensures loading is always set to false after the initial check
         if (isMounted) {
-          console.log('[AuthProvider] Authentication initialization completed.');
-          setLoading(false);
+          console.log('[AuthProvider] Authentication initialization completed, setting loading to false.');
+          setLoading(false); // This must be the final step of initial load
         }
       }
     };
 
-    // Setup auth state change listener
-    const setupAuthListener = () => {
-      console.log('[AuthProvider] Setting up auth state change listener.');
-      const { data: listenerData } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('[AuthProvider] Auth state change:', event);
-        if (!isMounted) return; // Ensure component is still mounted
+    initializeAuth(); // Run initial check
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session) {
-            try {
-              const userData = await fetchUserData(session.user.id);
-              if (userData) {
-                console.log('[AuthProvider] User signed in/refreshed:', userData.username);
-                setUser(userData);
-                setError(null);
-                setDegradedMode(false);
-              } else {
-                console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
-                await supabase.auth.signOut();
-                setUser(null);
-                setError('User profile not found. Please sign up or contact support.');
-              }
-            } catch (userError: any) {
-              console.error('[AuthProvider] Error fetching user data on auth state change:', userError.message);
-              await supabase.auth.signOut();
-              setUser(null);
-              setError(userError.message || 'Failed to load user profile on auth change.');
-            }
-          }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('[AuthProvider] User signed out.');
-          setUser(null);
-          setError(null);
-          setDegradedMode(false);
-        }
-      });
-
-      authListener = listenerData;
-    };
-
-    initializeAuth(); // Call immediately on mount
-    setupAuthListener(); // Set up listener
+    // Set up auth state change listener
+    authListener = supabase.auth.onAuthStateChange(handleAuthStateChange).data;
 
     return () => {
       console.log('[AuthProvider] Cleaning up...');
@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserData]); // Dependencies for useEffect
+  }, [fetchUserData]); // Only fetchUserData as a dependency, as navigate is stable.
 
   if (loading) { 
     return (

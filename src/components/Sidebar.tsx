@@ -4,14 +4,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 import { Button } from './ui/button';
-import { User, Building, ListChecks } from 'lucide-react'; // Import ListChecks icon
+import { User, Building, ListChecks } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from './ui/use-toast';
+
+interface Copropriete {
+  id: string;
+  nom: string;
+}
 
 const Sidebar = () => {
   const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [coproprietes, setCoproprietes] = useState<Copropriete[]>([]);
+  const [loadingCoproprietes, setLoadingCoproprietes] = useState(true);
+
+  useEffect(() => {
+    const fetchCoproprietes = async () => {
+      try {
+        setLoadingCoproprietes(true);
+        const { data, error } = await supabase
+          .from('coproprietes')
+          .select('id, nom')
+          .order('nom', { ascending: true });
+
+        if (error) throw error;
+        setCoproprietes(data || []);
+      } catch (error: any) {
+        toast({
+          title: "Erreur",
+          description: error.message || "Impossible de charger les copropriétés pour le filtre.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCoproprietes(false);
+      }
+    };
+
+    fetchCoproprietes();
+  }, [toast]);
 
   const canManage = user?.role === 'Superadmin' || user?.role === 'ASL';
 
@@ -38,16 +75,17 @@ const Sidebar = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-sidebar-foreground mb-2">Copropriété</label>
-          <Select onValueChange={setCoproFilter} value={coproFilter}>
+          <Select onValueChange={setCoproFilter} value={coproFilter} disabled={loadingCoproprietes}>
             <SelectTrigger className="rounded-md border-sidebar-border bg-background text-foreground">
-              <SelectValue placeholder="Copropriété" />
+              <SelectValue placeholder={loadingCoproprietes ? "Chargement..." : "Copropriété"} />
             </SelectTrigger>
             <SelectContent className="rounded-md">
               <SelectItem value="all">Toutes</SelectItem>
-              <SelectItem value="A">Bâtiment A</SelectItem>
-              <SelectItem value="B">Bâtiment B</SelectItem>
-              <SelectItem value="C">Bâtiment C</SelectItem>
-              <SelectItem value="D">Bâtiment D</SelectItem>
+              {coproprietes.map((copro) => (
+                <SelectItem key={copro.id} value={copro.id}>
+                  {copro.nom}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -75,7 +113,7 @@ const Sidebar = () => {
           <User className="mr-2 h-4 w-4" />
           Mon Profil
         </Button>
-        {canManage && ( // Show to Superadmin and ASL
+        {canManage && (
           <>
             <Button
               variant="outline"

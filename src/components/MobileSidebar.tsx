@@ -81,7 +81,7 @@ const MobileSidebar = () => {
                 }}
               >
                 <User className="mr-2 h-4 w-4" />
-                <span>Mon Profil</span>
+                <span className="truncate">Mon Profil</span>
               </Button>
 
               {canManage && (
@@ -95,7 +95,7 @@ const MobileSidebar = () => {
                     }}
                   >
                     <Building className="mr-2 h-4 w-4" />
-                    <span>Gérer les copropriétés</span>
+                    <span className="truncate">Gérer les copropriétés</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -106,7 +106,7 @@ const MobileSidebar = () => {
                     }}
                   >
                     <ListChecks className="mr-2 h-4 w-4" />
-                    <span>Gérer les catégories</span>
+                    <span className="truncate">Gérer les catégories</span>
                   </Button>
                 </>
               )}

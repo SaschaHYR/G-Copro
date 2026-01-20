@@ -111,7 +111,7 @@ const Sidebar = () => {
           onClick={() => navigate('/profile')}
         >
           <User className="mr-2 h-4 w-4" />
-          <span className="text-sm md:text-base">Mon Profil</span>
+          <span className="text-sm md:text-base truncate">Mon Profil</span>
         </Button>
         {canManage && (
           <>
@@ -121,7 +121,7 @@ const Sidebar = () => {
               onClick={() => navigate('/coproprietes')}
             >
               <Building className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base">Gérer les copropriétés</span>
+              <span className="text-sm md:text-base truncate">Gérer les copropriétés</span>
             </Button>
             <Button
               variant="outline"
@@ -129,7 +129,7 @@ const Sidebar = () => {
               onClick={() => navigate('/categories')}
             >
               <ListChecks className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base">Gérer les catégories</span>
+              <span className="text-sm md:text-base truncate">Gérer les catégories</span>
             </Button>
           </>
         )}

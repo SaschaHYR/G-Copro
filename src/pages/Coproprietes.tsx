@@ -385,6 +385,8 @@ const Coproprietes = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Syndic</TableHead>
                   <TableHead>Adresse</TableHead>
                   <TableHead>Ville</TableHead>
                   <TableHead>Code Postal</TableHead>
@@ -395,7 +397,7 @@ const Coproprietes = () => {
               <TableBody>
                 {coproprietes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={canManageCoproprietes ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={canManageCoproprietes ? 8 : 7} className="text-center py-8 text-muted-foreground">
                       Aucune copropriété trouvée.
                     </TableCell>
                   </TableRow>
@@ -403,6 +405,19 @@ const Coproprietes = () => {
                   coproprietes.map((copropriete) => (
                     <TableRow key={copropriete.id}>
                       <TableCell className="font-medium">{copropriete.nom}</TableCell>
+                      <TableCell className="max-w-xs truncate">{copropriete.description || 'N/A'}</TableCell>
+                      <TableCell>
+                        {copropriete.syndic_nom ? (
+                          <div>
+                            <div className="font-medium">{copropriete.syndic_nom}</div>
+                            {copropriete.syndic_responsable_prenom && copropriete.syndic_responsable_nom && (
+                              <div className="text-sm text-muted-foreground">
+                                {copropriete.syndic_responsable_prenom} {copropriete.syndic_responsable_nom}
+                              </div>
+                            )}
+                          </div>
+                        ) : 'N/A'}
+                      </TableCell>
                       <TableCell>{copropriete.adresse || 'N/A'}</TableCell>
                       <TableCell>{copropriete.ville || 'N/A'}</TableCell>
                       <TableCell>{copropriete.code_postal || 'N/A'}</TableCell>

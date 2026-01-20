@@ -31,60 +31,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-  // Add retry mechanism for fetching user data
-  const fetchUserDataWithRetry = useCallback(async (userId: string, retries = 3, delay = 1000): Promise<User | null> => {
-    console.log(`[AuthProvider] Fetching user data for ID: ${userId} (attempt 1 of ${retries})`);
+  const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
+    console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.warn(`[AuthProvider] fetchUserData for ${userId} timed out after 15 seconds.`);
+      abortController.abort();
+    }, 15000); // 15 seconds timeout
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => {
-          console.warn(`[AuthProvider] fetchUserData for ${userId} timed out after 15 seconds.`);
-          abortController.abort();
-        }, 15000); // 15 seconds timeout
+    try {
+      const { data, error } = await supabase
+        .from('user_informations')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle({ signal: abortController.signal }); // Pass the signal to the request
 
-        const { data, error } = await supabase
-          .from('user_informations')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle({ signal: abortController.signal });
+      clearTimeout(timeoutId); // Clear timeout if request completes
 
-        clearTimeout(timeoutId);
-
-        if (error) {
-          console.error(`[AuthProvider] User data fetch error (attempt ${attempt}):`, error);
-          if (attempt < retries) {
-            console.log(`[AuthProvider] Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          return null;
-        }
-
-        if (!data) {
-          console.warn(`[AuthProvider] No user data found for ID: ${userId} (attempt ${attempt})`);
-          if (attempt < retries) {
-            console.log(`[AuthProvider] Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          return null;
-        }
-
-        console.log('[AuthProvider] User data fetched successfully:', data);
-        return data;
-      } catch (err: any) {
-        console.error(`[AuthProvider] Error in fetchUserData (attempt ${attempt}):`, err.message);
-        if (attempt < retries) {
-          console.log(`[AuthProvider] Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
+      if (error) {
+        console.error('[AuthProvider] User data fetch error:', error);
         return null;
       }
-    }
 
-    return null;
+      if (!data) {
+        console.warn('[AuthProvider] No user data found for ID:', userId);
+        return null;
+      }
+
+      console.log('[AuthProvider] User data fetched successfully:', data);
+      return data;
+    } catch (err: any) {
+      clearTimeout(timeoutId); // Ensure timeout is cleared on error too
+      if (err.name === 'AbortError') {
+        console.error('[AuthProvider] User data fetch aborted (likely due to timeout).');
+      } else {
+        console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      }
+      return null;
+    }
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -103,15 +87,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthProvider] Login successful, session:', data.session);
 
       if (data.user) {
-        // Use the retry mechanism to fetch user data
-        const userData = await fetchUserDataWithRetry(data.user.id);
-
+        const userData = await fetchUserData(data.user.id);
         if (userData) {
           setUser(userData);
           setError(null);
           setDegradedMode(false);
         } else {
-          console.warn('[AuthProvider] User not found in database after login with retries. Signing out.');
+          console.warn('[AuthProvider] User not found in database after login. Signing out.');
           await supabase.auth.signOut();
           throw new Error('User profile not found. Please sign up or contact support.');
         }
@@ -120,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('[AuthProvider] Login failed:', err.message);
       throw err;
     }
-  }, [fetchUserDataWithRetry]);
+  }, [fetchUserData]);
 
   const logout = useCallback(async () => {
     console.log('[AuthProvider] Attempting logout');
@@ -156,8 +138,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('[AuthProvider] Signup successful, user:', data.user);
-      // Removed manual insert into user_informations.
-      // Relying on the 'handle_new_user' database trigger to create the profile.
+
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('user_informations')
+          .insert({
+            id: data.user.id,
+            username: email,
+            role: 'En attente',
+            actif: true,
+            first_name: '',
+            last_name: '',
+            copro: null
+          });
+
+        if (profileError) {
+          console.error('[AuthProvider] Profile creation error:', profileError);
+          throw profileError;
+        }
+      }
     } catch (err: any) {
       console.error('[AuthProvider] Signup failed:', err.message);
       throw err;
@@ -188,8 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session) {
           try {
-            // Use the retry mechanism to fetch user data
-            const userData = await fetchUserDataWithRetry(session.user.id);
+            const userData = await fetchUserData(session.user.id);
             if (isMounted) { // Check isMounted again after async operation
               if (userData) {
                 console.log('[AuthProvider] User signed in/refreshed:', userData.username);
@@ -197,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setError(null);
                 setDegradedMode(false);
               } else {
-                console.warn('[AuthProvider] User not found in database on auth state change with retries. Signing out.');
+                console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
                 await supabase.auth.signOut();
                 setUser(null);
                 setError('User profile not found. Please sign up or contact support.');
@@ -224,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
-      setLoading(true);
+      setLoading(true); 
       setError(null);
 
       try {
@@ -242,8 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (supabaseUser) {
           console.log('[AuthProvider] Active user found during init, fetching profile data...');
-          // Use the retry mechanism to fetch user data
-          const userData = await fetchUserDataWithRetry(supabaseUser.id);
+          const userData = await fetchUserData(supabaseUser.id);
 
           if (isMounted) { // Check isMounted again after async operation
             if (userData) {
@@ -252,7 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setError(null);
               setDegradedMode(false);
             } else {
-              console.warn('[AuthProvider] User found in auth.users but not in public.user_informations during init with retries. Signing out.');
+              console.warn('[AuthProvider] User found in auth.users but not in public.user_informations during init. Signing out.');
               await supabase.auth.signOut();
               setUser(null);
               setError('User profile not found. Please sign up or contact support.');
@@ -295,9 +292,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserDataWithRetry]); // Removed loading, error, user from dependencies to prevent unnecessary re-runs.
+  }, [fetchUserData]); // Removed loading, error, user from dependencies to prevent unnecessary re-runs.
 
-  if (loading) {
+  if (loading) { 
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

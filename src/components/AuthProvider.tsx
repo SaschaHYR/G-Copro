@@ -24,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Configuration adaptée pour le développement local
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  const isProduction = !isLocalhost;
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     try {
@@ -67,7 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('[AuthProvider] Login successful, session:', data.session);
 
-      // Après une connexion réussie, récupérer les données utilisateur
       if (data.user) {
         const userData = await fetchUserData(data.user.id);
         if (userData) {
@@ -75,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setError(null);
           setDegradedMode(false);
         } else {
-          console.warn('[AuthProvider] User not found in database after login.');
+          console.warn('[AuthProvider] User not found in database after login. Signing out.');
           await supabase.auth.signOut();
           throw new Error('User profile not found. Please sign up or contact support.');
         }
@@ -145,65 +143,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Single useEffect for initialization and auth state changes
   useEffect(() => {
     let isMounted = true;
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
-      setLoading(true); // Set loading true at the very start of initialization
+      setLoading(true); 
       setError(null);
 
       try {
-        if (typeof window === 'undefined') {
-          console.log('[AuthProvider] Running in non-browser environment, skipping auth init.');
-          return; // Exit early for SSR
+        // Use supabase.auth.getUser() for a more direct way to get the current user
+        const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+
+        if (userError) {
+          console.error('[AuthProvider] Supabase getUser error:', userError);
+          throw userError; 
         }
 
-        console.log(`[AuthProvider] Environment: ${isProduction ? 'Production' : 'Development'}`);
+        if (supabaseUser) {
+          console.log('[AuthProvider] Active user found, fetching profile data...');
+          const userData = await fetchUserData(supabaseUser.id);
 
-        try {
-          // Check for existing session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            console.error('[AuthProvider] Session error:', sessionError);
-            throw sessionError;
-          }
-
-          console.log('[AuthProvider] Session check successful:', session);
-
-          if (session) {
-            console.log('[AuthProvider] Active session found, fetching user data...');
-            const userData = await fetchUserData(session.user.id);
-
-            if (userData) {
-              console.log('[AuthProvider] User data loaded successfully');
-              if (isMounted) {
-                setUser(userData);
-                setError(null);
-              }
-            } else {
-              console.warn('[AuthProvider] User not found in database, signing out.');
-              await supabase.auth.signOut();
-              if (isMounted) {
-                setUser(null);
-                setError('User profile not found. Please sign up or contact support.');
-              }
+          if (userData) {
+            console.log('[AuthProvider] User data loaded successfully');
+            if (isMounted) {
+              setUser(userData);
+              setError(null);
+              setDegradedMode(false);
             }
           } else {
-            console.log('[AuthProvider] No active session found.');
+            console.warn('[AuthProvider] User found in auth.users but not in public.user_informations. Signing out.');
+            await supabase.auth.signOut();
             if (isMounted) {
               setUser(null);
+              setError('User profile not found. Please sign up or contact support.');
             }
           }
-        } catch (sessionError: any) {
-          console.error('[AuthProvider] Session check failed:', sessionError.message);
+        } else {
+          console.log('[AuthProvider] No active user found.');
           if (isMounted) {
-            setError(sessionError.message || 'Failed to check session. Please try again.');
             setUser(null);
-            setDegradedMode(true);
+            setError(null);
+            setDegradedMode(false);
           }
         }
       } catch (err: any) {
@@ -214,9 +196,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setDegradedMode(true);
         }
       } finally {
+        // This finally block ensures loading is always set to false after the initial check
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed.');
-          setLoading(false); // Ensure loading is set to false here
+          setLoading(false);
         }
       }
     };
@@ -226,49 +209,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthProvider] Setting up auth state change listener.');
       const { data: listenerData } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('[AuthProvider] Auth state change:', event);
+        if (!isMounted) return; // Ensure component is still mounted
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session) {
             try {
               const userData = await fetchUserData(session.user.id);
               if (userData) {
-                console.log('[AuthProvider] User signed in:', userData.username);
-                if (isMounted) {
-                  setUser(userData);
-                  setError(null);
-                  setDegradedMode(false);
-                }
+                console.log('[AuthProvider] User signed in/refreshed:', userData.username);
+                setUser(userData);
+                setError(null);
+                setDegradedMode(false);
               } else {
-                console.warn('[AuthProvider] User not found in database on auth state change.');
+                console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
                 await supabase.auth.signOut();
-                if (isMounted) {
-                  setUser(null);
-                  setError('User profile not found. Please sign up or contact support.');
-                }
+                setUser(null);
+                setError('User profile not found. Please sign up or contact support.');
               }
             } catch (userError: any) {
               console.error('[AuthProvider] Error fetching user data on auth state change:', userError.message);
               await supabase.auth.signOut();
-              if (isMounted) {
-                setUser(null);
-                setError(userError.message || 'Failed to load user profile on auth change.');
-              }
+              setUser(null);
+              setError(userError.message || 'Failed to load user profile on auth change.');
             }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('[AuthProvider] User signed out.');
-          if (isMounted) {
-            setUser(null);
-            setError(null);
-          }
+          setUser(null);
+          setError(null);
+          setDegradedMode(false);
         }
       });
 
       authListener = listenerData;
     };
 
-    initializeAuth();
-    setupAuthListener();
+    initializeAuth(); // Call immediately on mount
+    setupAuthListener(); // Set up listener
 
     return () => {
       console.log('[AuthProvider] Cleaning up...');
@@ -278,9 +255,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserData, isProduction]); // Dependencies for useEffect
+  }, [fetchUserData]); // Dependencies for useEffect
 
-  if (loading) { // Simplified loading check
+  if (loading) { 
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

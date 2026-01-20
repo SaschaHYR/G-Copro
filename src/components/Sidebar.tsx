@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 import { Button } from './ui/button';
-import { User, Building, ListChecks } from 'lucide-react';
+import { User, Building, ListChecks, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { useState, useEffect } from 'react';
@@ -55,9 +55,61 @@ const Sidebar = () => {
   return (
     <Card className="w-full md:w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold text-sidebar-foreground md:text-xl">Filtres</CardTitle>
+        <CardTitle className="text-lg font-semibold text-sidebar-foreground md:text-xl">Navigation</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 flex-1">
+      <CardContent className="space-y-2">
+        <Button
+          variant="outline"
+          className="w-full justify-start rounded-full"
+          onClick={() => navigate('/')}
+        >
+          <Home className="mr-2 h-4 w-4" />
+          <span className="text-sm md:text-base truncate">Accueil</span>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="w-full justify-start rounded-full"
+          onClick={() => navigate('/profile')}
+        >
+          <User className="mr-2 h-4 w-4" />
+          <span className="text-sm md:text-base truncate">Mon Profil</span>
+        </Button>
+
+        {canManage && (
+          <>
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => navigate('/coproprietes')}
+            >
+              <Building className="mr-2 h-4 w-4" />
+              <span className="text-sm md:text-base truncate">Gérer les copropriétés</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => navigate('/categories')}
+            >
+              <ListChecks className="mr-2 h-4 w-4" />
+              <span className="text-sm md:text-base truncate">Gérer les catégories</span>
+            </Button>
+            {user?.role === 'Superadmin' && (
+              <Button
+                variant="outline"
+                className="w-full justify-start rounded-full"
+                onClick={() => navigate('/admin')}
+              >
+                <User className="mr-2 h-4 w-4" />
+                <span className="text-sm md:text-base truncate">Panneau d'administration</span>
+              </Button>
+            )}
+          </>
+        )}
+      </CardContent>
+
+      <div className="p-4 border-t border-sidebar-border space-y-4">
+        <h3 className="text-base font-semibold text-sidebar-foreground mb-2">Filtres</h3>
         <div>
           <label className="block text-sm font-medium text-sidebar-foreground mb-2">Statut</label>
           <Select onValueChange={setStatusFilter} value={statusFilter}>
@@ -103,36 +155,6 @@ const Sidebar = () => {
             </SelectContent>
           </Select>
         </div>
-      </CardContent>
-      <div className="p-4 border-t border-sidebar-border space-y-2">
-        <Button
-          variant="outline"
-          className="w-full justify-start rounded-full"
-          onClick={() => navigate('/profile')}
-        >
-          <User className="mr-2 h-4 w-4" />
-          <span className="text-sm md:text-base truncate">Mon Profil</span>
-        </Button>
-        {canManage && (
-          <>
-            <Button
-              variant="outline"
-              className="w-full justify-start rounded-full"
-              onClick={() => navigate('/coproprietes')}
-            >
-              <Building className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base truncate">Gérer les copropriétés</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start rounded-full"
-              onClick={() => navigate('/categories')}
-            >
-              <ListChecks className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base truncate">Gérer les catégories</span>
-            </Button>
-          </>
-        )}
       </div>
     </Card>
   );

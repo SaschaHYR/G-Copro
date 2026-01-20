@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
+import { ScrollArea } from './ui/scroll-area';
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -86,37 +87,24 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
+        <Button variant="outline" size="sm" className="rounded-full px-2 py-1 text-xs md:px-3 md:py-1 md:text-sm">
           Voir
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px] rounded-lg max-h-[90vh] overflow-y-auto md:max-w-[900px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Détails du Ticket {ticket.ticket_id_unique}</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-primary md:text-xl">Détails du Ticket {ticket.ticket_id_unique}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6">
-          <Card className="rounded-lg shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground md:text-xl">{ticket.titre}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-muted-foreground">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Créé par</p>
-                  <p className="font-medium text-foreground">{creatorName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Copropriété</p>
-                  <p className="font-medium text-foreground">{ticket.copro}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Catégorie</p>
-                  <p className="font-medium text-foreground">{ticket.categorie}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Statut</p>
+        <ScrollArea className="h-[calc(90vh-100px)] pr-4">
+          <div className="space-y-4">
+            <Card className="rounded-lg shadow-md">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-base font-semibold text-foreground md:text-lg truncate">
+                    {ticket.titre}
+                  </CardTitle>
                   <Badge
-                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    className="rounded-full px-2 py-1 text-xs font-semibold"
                     variant={
                       ticket.status === 'ouvert'
                         ? 'default'
@@ -130,106 +118,121 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
                     {ticket.status}
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Priorité</p>
-                  <p className="font-medium text-foreground">{ticket.priorite}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Destinataire</p>
-                  <p className="font-medium text-foreground">{ticket.destinataire_role}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date de création</p>
-                  <p className="font-medium text-foreground">{new Date(ticket.date_create).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date de dernière action</p>
-                  <p className="font-medium text-foreground">{ticket.date_update ? new Date(ticket.date_update).toLocaleDateString() : 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Clôturé par</p>
-                  <p className="font-medium text-foreground">{closerName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date de clôture</p>
-                  <p className="font-medium text-foreground">{ticket.cloture_date ? new Date(ticket.cloture_date).toLocaleDateString() : 'N/A'}</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="text-sm text-gray-500 mb-2">Description</p>
-                <p className="text-foreground">{ticket.description}</p>
-              </div>
-              {ticket.pieces_jointes && ticket.pieces_jointes.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-sm text-gray-500 mb-2">Pièces jointes</p>
-                  <div className="flex flex-wrap gap-2">
-                    {ticket.pieces_jointes.map((piece, index) => (
-                      <Button key={index} variant="outline" size="sm" className="rounded-full">
-                        {piece}
-                      </Button>
-                    ))}
+              </CardHeader>
+              <CardContent className="text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-muted-foreground">Créé par</p>
+                    <p className="font-medium text-foreground truncate">{creatorName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Copropriété</p>
+                    <p className="font-medium text-foreground truncate">{ticket.copro}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Catégorie</p>
+                    <p className="font-medium text-foreground truncate">{ticket.categorie}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Priorité</p>
+                    <p className="font-medium text-foreground">{ticket.priorite}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Destinataire</p>
+                    <p className="font-medium text-foreground truncate">{ticket.destinataire_role}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Date de création</p>
+                    <p className="font-medium text-foreground">{new Date(ticket.date_create).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Date de dernière action</p>
+                    <p className="font-medium text-foreground">{ticket.date_update ? new Date(ticket.date_update).toLocaleDateString() : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Clôturé par</p>
+                    <p className="font-medium text-foreground truncate">{closerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Date de clôture</p>
+                    <p className="font-medium text-foreground">{ticket.cloture_date ? new Date(ticket.cloture_date).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Comments/Exchanges Section */}
-          <Card className="rounded-lg shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold md:text-xl">Échanges</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingComments ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex items-start space-x-3 p-3 border rounded-lg">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-1/3" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-muted-foreground mb-1">Description</p>
+                  <p className="text-foreground">{ticket.description}</p>
                 </div>
-              ) : comments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">Aucun échange pour ce ticket.</p>
-              ) : (
-                <div className="space-y-6">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="flex items-start space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src="/placeholder.svg" alt="Avatar" />
-                        <AvatarFallback className="text-sm font-bold bg-primary text-primary-foreground">
-                          {getUserDisplayName(comment.auteur).charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <p className="font-medium text-foreground">{getUserDisplayName(comment.auteur)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(comment.date), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                          </p>
-                          <Badge variant={comment.type === 'reponse' ? 'default' : 'secondary'} className="text-xs">
-                            {comment.type === 'reponse' ? 'Réponse' : 'Transfert'}
-                          </Badge>
-                        </div>
-                        <div className="bg-muted p-3 rounded-lg">
-                          <p className="text-foreground">{comment.message}</p>
+                {ticket.pieces_jointes && ticket.pieces_jointes.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-muted-foreground mb-1">Pièces jointes</p>
+                    <div className="flex flex-wrap gap-1">
+                      {ticket.pieces_jointes.map((piece, index) => (
+                        <Button key={index} variant="outline" size="sm" className="rounded-full text-xs px-2 py-1 h-6">
+                          {piece}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Comments/Exchanges Section */}
+            <Card className="rounded-lg shadow-md">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold md:text-lg">Échanges</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingComments ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-start space-x-2 p-2 border rounded-lg">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <Skeleton className="h-3 w-1/3" />
+                          <Skeleton className="h-3 w-full" />
+                          <Skeleton className="h-3 w-1/2" />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Button onClick={handleClose} className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg">
-            Fermer
-          </Button>
-        </div>
+                    ))}
+                  </div>
+                ) : comments.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-3 text-sm">Aucun échange pour ce ticket.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="flex items-start space-x-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src="/placeholder.svg" alt="Avatar" />
+                          <AvatarFallback className="text-xs font-bold bg-primary text-primary-foreground">
+                            {getUserDisplayName(comment.auteur).charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-1 mb-1">
+                            <p className="font-medium text-foreground text-sm">{getUserDisplayName(comment.auteur)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(comment.date), 'dd MMM yyyy à HH:mm', { locale: fr })}
+                            </p>
+                            <Badge variant={comment.type === 'reponse' ? 'default' : 'secondary'} className="text-xs px-1 py-0 h-5">
+                              {comment.type === 'reponse' ? 'Réponse' : 'Transfert'}
+                            </Badge>
+                          </div>
+                          <div className="bg-muted p-2 rounded-lg text-sm">
+                            <p className="text-foreground">{comment.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+        <Button onClick={handleClose} className="w-full rounded-full py-2 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-base">
+          Fermer
+        </Button>
       </DialogContent>
     </Dialog>
   );

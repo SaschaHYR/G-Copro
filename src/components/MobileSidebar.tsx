@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
-import { Menu, User, Building, ListChecks, Filter } from 'lucide-react';
+import { Menu, User, Building, ListChecks, Filter, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -70,47 +70,70 @@ const MobileSidebar = () => {
             <h2 className="text-xl font-bold text-primary">Menu</h2>
           </div>
 
-          <div className="space-y-4 mb-8">
-            <div className="flex flex-col space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start rounded-full"
-                onClick={() => {
-                  navigate('/profile');
-                  setOpen(false);
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span className="truncate">Mon Profil</span>
-              </Button>
+          <div className="space-y-2 mb-8">
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => {
+                navigate('/');
+                setOpen(false);
+              }}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              <span className="truncate">Accueil</span>
+            </Button>
 
-              {canManage && (
-                <>
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => {
+                navigate('/profile');
+                setOpen(false);
+              }}
+            >
+              <User className="mr-2 h-4 w-4" />
+              <span className="truncate">Mon Profil</span>
+            </Button>
+
+            {canManage && (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start rounded-full"
+                  onClick={() => {
+                    navigate('/coproprietes');
+                    setOpen(false);
+                  }}
+                >
+                  <Building className="mr-2 h-4 w-4" />
+                  <span className="truncate">Gérer les copropriétés</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start rounded-full"
+                  onClick={() => {
+                    navigate('/categories');
+                    setOpen(false);
+                  }}
+                >
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  <span className="truncate">Gérer les catégories</span>
+                </Button>
+                {user?.role === 'Superadmin' && (
                   <Button
                     variant="outline"
                     className="w-full justify-start rounded-full"
                     onClick={() => {
-                      navigate('/coproprietes');
+                      navigate('/admin');
                       setOpen(false);
                     }}
                   >
-                    <Building className="mr-2 h-4 w-4" />
-                    <span className="truncate">Gérer les copropriétés</span>
+                    <User className="mr-2 h-4 w-4" />
+                    <span className="truncate">Panneau d'administration</span>
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start rounded-full"
-                    onClick={() => {
-                      navigate('/categories');
-                      setOpen(false);
-                    }}
-                  >
-                    <ListChecks className="mr-2 h-4 w-4" />
-                    <span className="truncate">Gérer les catégories</span>
-                  </Button>
-                </>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="border-t pt-4 mb-4">

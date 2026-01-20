@@ -10,10 +10,13 @@ import TransferModal from './TransferModal';
 import { useTickets } from '@/hooks/use-tickets';
 import { useEffect } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TicketDataTable = () => {
   const { tickets, isLoading, error, invalidateTickets } = useTickets();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (error) {
@@ -55,6 +58,84 @@ const TicketDataTable = () => {
     );
   }
 
+  // Mobile view - vertical list
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {tickets.length === 0 ? (
+          <Card className="text-center py-8 text-muted-foreground">
+            <CardContent>Aucun ticket trouvé.</CardContent>
+          </Card>
+        ) : (
+          tickets.map((ticket) => (
+            <Card key={ticket.id} className="rounded-lg shadow-md border border-border">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg font-semibold text-foreground truncate flex-1">
+                    {ticket.ticket_id_unique} - {ticket.titre}
+                  </CardTitle>
+                  <Badge
+                    className="rounded-full px-2 py-1 text-xs font-semibold ml-2"
+                    variant={
+                      ticket.status === 'ouvert'
+                        ? 'default'
+                        : ticket.status === 'en cours'
+                        ? 'secondary'
+                        : ticket.status === 'transmis'
+                        ? 'outline'
+                        : 'destructive'
+                    }
+                  >
+                    {ticket.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Copropriété</p>
+                    <p className="font-medium text-foreground truncate">{ticket.copro}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Créé par</p>
+                    <p className="font-medium text-foreground truncate">
+                      {ticket.createur?.first_name} {ticket.createur?.last_name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Priorité</p>
+                    <p className="font-medium text-foreground">{ticket.priorite}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Date création</p>
+                    <p className="font-medium text-foreground">
+                      {new Date(ticket.date_create).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end pt-2">
+                  <TicketDetailModal ticket={ticket} />
+                  <ReplyModal ticketId={ticket.id} onReplySuccess={invalidateTickets} />
+                  <CloseModal
+                    ticketId={ticket.id}
+                    ticketStatus={ticket.status}
+                    onCloseSuccess={invalidateTickets}
+                  />
+                  <TransferModal
+                    ticketId={ticket.id}
+                    currentDestinataireRole={ticket.destinataire_role}
+                    onTransferSuccess={invalidateTickets}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  // Desktop view - table
   return (
     <div className="overflow-x-auto rounded-lg shadow-lg border border-border">
       <Table>

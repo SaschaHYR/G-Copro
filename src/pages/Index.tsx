@@ -15,9 +15,9 @@ const Index = () => {
           <div className="w-full md:w-64 hidden md:block">
             <Sidebar />
           </div>
-          <main className="flex-1 p-4 md:p-6">
+          <main className="flex-1 p-2 md:p-6">
             <div className="flex justify-between items-center mb-4 md:mb-6">
-              <h2 className="text-2xl font-extrabold text-foreground md:text-3xl">Vos Tickets</h2>
+              <h2 className="text-xl font-extrabold text-foreground md:text-3xl">Vos Tickets</h2>
               <NewTicketModal />
             </div>
             <TicketDataTable />

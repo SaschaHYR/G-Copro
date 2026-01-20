@@ -65,10 +65,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
 
   const getUserDisplayName = (userId: string) => {
     // Check if we have the user data from comments
-    const comment = comments.find(c => c.auteur === userId);
+    const comment = comments.find((c: Commentaire) => c.auteur === userId);
     const commentUser = comment?.auteur;
-    if (commentUser && typeof commentUser === 'object' && 'first_name' in commentUser) {
-      return `${commentUser.first_name || ''} ${commentUser.last_name || ''}`.trim() || 'Utilisateur';
+    if (commentUser && typeof commentUser === 'object' && commentUser !== null && 'first_name' in commentUser) {
+      const userObj = commentUser as { first_name?: string; last_name?: string };
+      return `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim() || 'Utilisateur';
     }
 
     // Fallback to ticket creator or closer if available

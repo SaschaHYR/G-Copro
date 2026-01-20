@@ -16,7 +16,7 @@ const Header = () => {
 
   return (
     <header className="flex items-center justify-between p-4 bg-card border-b border-border rounded-b-lg shadow-sm">
-      <h1 className="text-2xl font-bold text-primary">Gestion des Tickets</h1>
+      <h1 className="text-2xl font-bold text-primary">G Copro</h1>
       <div className="flex items-center space-x-2">
         {user?.role === 'Superadmin' && (
           <Button

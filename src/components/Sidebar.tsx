@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 import { Button } from './ui/button';
-import { User, Building } from 'lucide-react';
+import { User, Building, ListChecks } from 'lucide-react'; // Import ListChecks icon
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 
@@ -12,6 +12,8 @@ const Sidebar = () => {
   const { statusFilter, setStatusFilter, coproFilter, setCoproFilter, periodFilter, setPeriodFilter } = useTicketFilters();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const canManage = user?.role === 'Superadmin' || user?.role === 'ASL';
 
   return (
     <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
@@ -73,15 +75,25 @@ const Sidebar = () => {
           <User className="mr-2 h-4 w-4" />
           Mon Profil
         </Button>
-        {user?.role === 'Superadmin' && (
-          <Button
-            variant="outline"
-            className="w-full justify-start rounded-full"
-            onClick={() => navigate('/coproprietes')}
-          >
-            <Building className="mr-2 h-4 w-4" />
-            Copropriétés
-          </Button>
+        {canManage && ( // Show to Superadmin and ASL
+          <>
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => navigate('/coproprietes')}
+            >
+              <Building className="mr-2 h-4 w-4" />
+              Gérer les copropriétés
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start rounded-full"
+              onClick={() => navigate('/categories')}
+            >
+              <ListChecks className="mr-2 h-4 w-4" />
+              Gérer les catégories
+            </Button>
+          </>
         )}
       </div>
     </Card>

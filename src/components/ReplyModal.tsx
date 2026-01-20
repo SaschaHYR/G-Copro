@@ -12,7 +12,7 @@ import { Input } from './ui/input';
 
 interface ReplyModalProps {
   ticketId: string;
-  onReplySuccess: () => void; // Callback to refresh ticket list
+  onReplySuccess: () => void;
 }
 
 const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => {
@@ -83,7 +83,7 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
       setOpen(false);
       setMessage('');
       setPhotos([]);
-      onReplySuccess(); // Refresh the ticket list
+      onReplySuccess();
     } catch (error: any) {
       toast({
         title: "Erreur lors de l'envoi de la réponse",
@@ -98,13 +98,13 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full">
+        <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
           Répondre
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
+      <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">Répondre au Ticket {ticketId}</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Répondre au Ticket {ticketId}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -115,7 +115,7 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
               onChange={(e) => setMessage(e.target.value)}
               required
               disabled={loading}
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
+              className="rounded-md border-border focus:ring-primary focus:border-primary min-h-[100px]"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
               </p>
             )}
           </div>
-          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={loading}>
+          <Button type="submit" className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg" disabled={loading}>
             {loading ? 'Envoi en cours...' : 'Envoyer'}
           </Button>
         </form>

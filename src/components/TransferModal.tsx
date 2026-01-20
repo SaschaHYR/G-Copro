@@ -13,11 +13,11 @@ import { UserRole } from '@/types';
 
 interface TransferModalProps {
   ticketId: string;
-  currentDestinataireRole: UserRole; // This prop is still needed for the interface, but not directly used in the component's logic
-  onTransferSuccess: () => void; // Callback to refresh ticket list
+  currentDestinataireRole: UserRole;
+  onTransferSuccess: () => void;
 }
 
-const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSuccess }) => { // Removed currentDestinataireRole from destructuring
+const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSuccess }) => {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');
@@ -61,7 +61,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSucce
         .from('tickets')
         .update({
           destinataire_role: destinataire,
-          status: 'transmis', // Set status to 'transmis' upon transfer
+          status: 'transmis',
           date_update: new Date().toISOString(),
         })
         .eq('id', ticketId);
@@ -85,7 +85,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSucce
       setOpen(false);
       setMessage('');
       setDestinataire('');
-      onTransferSuccess(); // Refresh the ticket list
+      onTransferSuccess();
     } catch (error: any) {
       toast({
         title: "Erreur lors de la transmission du ticket",
@@ -100,13 +100,13 @@ const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSucce
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full">
+        <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
           Transmettre
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
+      <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">Transmettre le Ticket {ticketId}</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Transmettre le Ticket {ticketId}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -132,10 +132,10 @@ const TransferModal: React.FC<TransferModalProps> = ({ ticketId, onTransferSucce
               onChange={(e) => setMessage(e.target.value)}
               required
               disabled={loading}
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
+              className="rounded-md border-border focus:ring-primary focus:border-primary min-h-[100px]"
             />
           </div>
-          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={loading}>
+          <Button type="submit" className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg" disabled={loading}>
             {loading ? 'Transmission en cours...' : 'Transmettre'}
           </Button>
         </form>

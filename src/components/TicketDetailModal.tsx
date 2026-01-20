@@ -86,18 +86,18 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full">
+        <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
           Voir
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px] rounded-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] rounded-lg max-h-[90vh] overflow-y-auto md:max-w-[900px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">Détails du Ticket {ticket.ticket_id_unique}</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Détails du Ticket {ticket.ticket_id_unique}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           <Card className="rounded-lg shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-semibold text-foreground">{ticket.titre}</CardTitle>
+              <CardTitle className="text-lg font-semibold text-foreground md:text-xl">{ticket.titre}</CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,7 +177,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
           {/* Comments/Exchanges Section */}
           <Card className="rounded-lg shadow-md">
             <CardHeader>
-              <CardTitle className="text-xl font-semibold">Échanges</CardTitle>
+              <CardTitle className="text-lg font-semibold md:text-xl">Échanges</CardTitle>
             </CardHeader>
             <CardContent>
               {loadingComments ? (
@@ -226,7 +226,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
             </CardContent>
           </Card>
 
-          <Button onClick={handleClose} className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300">
+          <Button onClick={handleClose} className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg">
             Fermer
           </Button>
         </div>

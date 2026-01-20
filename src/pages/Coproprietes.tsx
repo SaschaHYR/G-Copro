@@ -78,7 +78,7 @@ const Coproprietes = () => {
   }, []);
 
   const canManageCoproprietes = user?.role === 'Superadmin' || user?.role === 'ASL';
-  const isSuperadmin = user?.role === 'Superadmin'; // New check for Superadmin
+  const isSuperadmin = user?.role === 'Superadmin';
 
   const handleAddCopropriete = async () => {
     if (!canManageCoproprietes) {
@@ -217,35 +217,35 @@ const Coproprietes = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Gestion des copropriétés</h1>
-        <div className="flex space-x-2">
-          <Link to="/">
-            <Button variant="outline" className="rounded-full">
+    <div className="min-h-screen flex flex-col bg-background p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 space-y-4 md:space-y-0">
+        <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">Gestion des copropriétés</h1>
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+          <Link to="/" className="w-full md:w-auto">
+            <Button variant="outline" className="rounded-full w-full md:w-auto">
               <Home className="mr-2 h-4 w-4" />
-              Accueil
+              <span className="text-sm">Accueil</span>
             </Button>
           </Link>
-          {isSuperadmin && ( // Only show "Retour à l'Admin" for Superadmin
-            <Link to="/admin">
-              <Button variant="outline" className="rounded-full">
+          {isSuperadmin && (
+            <Link to="/admin" className="w-full md:w-auto">
+              <Button variant="outline" className="rounded-full w-full md:w-auto">
                 <Home className="mr-2 h-4 w-4" />
-                Retour à l'Admin
+                <span className="text-sm">Retour à l'Admin</span>
               </Button>
             </Link>
           )}
           {canManageCoproprietes && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Ajouter une copropriété
+                <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto md:px-6 md:py-3 md:text-lg">
+                  <PlusCircle className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-sm md:text-base">Ajouter une copropriété</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] rounded-lg">
+              <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-primary">Nouvelle Copropriété</DialogTitle>
+                  <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouvelle Copropriété</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -352,7 +352,7 @@ const Coproprietes = () => {
                   </div>
                   <Button
                     onClick={handleAddCopropriete}
-                    className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+                    className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
                   >
                     Ajouter Copropriété
                   </Button>
@@ -365,7 +365,7 @@ const Coproprietes = () => {
 
       <Card className="rounded-lg shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Liste des copropriétés</CardTitle>
+          <CardTitle className="text-xl font-bold md:text-2xl">Liste des copropriétés</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -381,87 +381,91 @@ const Coproprietes = () => {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Syndic</TableHead>
-                  <TableHead>Adresse</TableHead>
-                  <TableHead>Ville</TableHead>
-                  <TableHead>Code Postal</TableHead>
-                  <TableHead>Statut</TableHead>
-                  {canManageCoproprietes && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {coproprietes.length === 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={canManageCoproprietes ? 8 : 7} className="text-center py-8 text-muted-foreground">
-                      Aucune copropriété trouvée.
-                    </TableCell>
+                    <TableHead className="text-sm md:text-base">Nom</TableHead>
+                    <TableHead className="text-sm md:text-base">Description</TableHead>
+                    <TableHead className="text-sm md:text-base">Syndic</TableHead>
+                    <TableHead className="text-sm md:text-base">Adresse</TableHead>
+                    <TableHead className="text-sm md:text-base">Ville</TableHead>
+                    <TableHead className="text-sm md:text-base">Code Postal</TableHead>
+                    <TableHead className="text-sm md:text-base">Statut</TableHead>
+                    {canManageCoproprietes && <TableHead className="text-right text-sm md:text-base">Actions</TableHead>}
                   </TableRow>
-                ) : (
-                  coproprietes.map((copropriete) => (
-                    <TableRow key={copropriete.id}>
-                      <TableCell className="font-medium">{copropriete.nom}</TableCell>
-                      <TableCell className="max-w-xs truncate">{copropriete.description || 'N/A'}</TableCell>
-                      <TableCell>
-                        {copropriete.syndic_nom ? (
-                          <div>
-                            <div className="font-medium">{copropriete.syndic_nom}</div>
-                            {copropriete.syndic_responsable_prenom && copropriete.syndic_responsable_nom && (
-                              <div className="text-sm text-muted-foreground">
-                                {copropriete.syndic_responsable_prenom} {copropriete.syndic_responsable_nom}
-                              </div>
-                            )}
-                          </div>
-                        ) : 'N/A'}
+                </TableHeader>
+                <TableBody>
+                  {coproprietes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={canManageCoproprietes ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                        Aucune copropriété trouvée.
                       </TableCell>
-                      <TableCell>{copropriete.adresse || 'N/A'}</TableCell>
-                      <TableCell>{copropriete.ville || 'N/A'}</TableCell>
-                      <TableCell>{copropriete.code_postal || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Badge variant={copropriete.actif ? 'default' : 'destructive'}>
-                          {copropriete.actif ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      {canManageCoproprietes && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingCopropriete(copropriete);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteCopropriete(copropriete.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    coproprietes.map((copropriete) => (
+                      <TableRow key={copropriete.id}>
+                        <TableCell className="font-medium text-sm md:text-base">{copropriete.nom}</TableCell>
+                        <TableCell className="max-w-xs truncate text-sm md:text-base">{copropriete.description || 'N/A'}</TableCell>
+                        <TableCell>
+                          {copropriete.syndic_nom ? (
+                            <div>
+                              <div className="font-medium text-sm md:text-base">{copropriete.syndic_nom}</div>
+                              {copropriete.syndic_responsable_prenom && copropriete.syndic_responsable_nom && (
+                                <div className="text-sm text-muted-foreground">
+                                  {copropriete.syndic_responsable_prenom} {copropriete.syndic_responsable_nom}
+                                </div>
+                              )}
+                            </div>
+                          ) : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-sm md:text-base">{copropriete.adresse || 'N/A'}</TableCell>
+                        <TableCell className="text-sm md:text-base">{copropriete.ville || 'N/A'}</TableCell>
+                        <TableCell className="text-sm md:text-base">{copropriete.code_postal || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={copropriete.actif ? 'default' : 'destructive'}>
+                            {copropriete.actif ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        {canManageCoproprietes && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingCopropriete(copropriete);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                className="text-sm"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteCopropriete(copropriete.id)}
+                                className="text-sm"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-lg">
+        <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-primary">Modifier la Copropriété</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Modifier la Copropriété</DialogTitle>
           </DialogHeader>
           {editingCopropriete && (
             <div className="space-y-4">
@@ -569,7 +573,7 @@ const Coproprietes = () => {
               </div>
               <Button
                 onClick={handleUpdateCopropriete}
-                className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+                className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
               >
                 Enregistrer les modifications
               </Button>

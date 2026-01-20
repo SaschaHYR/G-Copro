@@ -10,11 +10,13 @@ const Index = () => {
     <TicketFilterProvider>
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <div className="flex flex-1">
-          <Sidebar />
-          <main className="flex-1 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-extrabold text-foreground">Vos Tickets</h2>
+        <div className="flex flex-1 flex-col md:flex-row">
+          <div className="w-full md:w-64">
+            <Sidebar />
+          </div>
+          <main className="flex-1 p-4 md:p-6">
+            <div className="flex justify-between items-center mb-4 md:mb-6">
+              <h2 className="text-2xl font-extrabold text-foreground md:text-3xl">Vos Tickets</h2>
               <NewTicketModal />
             </div>
             <TicketDataTable />

@@ -180,35 +180,35 @@ const Categories = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Gestion des catégories</h1>
-        <div className="flex space-x-2">
-          <Link to="/">
-            <Button variant="outline" className="rounded-full">
+    <div className="min-h-screen flex flex-col bg-background p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 space-y-4 md:space-y-0">
+        <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">Gestion des catégories</h1>
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+          <Link to="/" className="w-full md:w-auto">
+            <Button variant="outline" className="rounded-full w-full md:w-auto">
               <Home className="mr-2 h-4 w-4" />
-              Accueil
+              <span className="text-sm">Accueil</span>
             </Button>
           </Link>
           {isSuperadmin && (
-            <Link to="/admin">
-              <Button variant="outline" className="rounded-full">
+            <Link to="/admin" className="w-full md:w-auto">
+              <Button variant="outline" className="rounded-full w-full md:w-auto">
                 <Home className="mr-2 h-4 w-4" />
-                Retour à l'Admin
+                <span className="text-sm">Retour à l'Admin</span>
               </Button>
             </Link>
           )}
           {canManageCategories && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Ajouter une catégorie
+                <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto md:px-6 md:py-3 md:text-lg">
+                  <PlusCircle className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-sm md:text-base">Ajouter une catégorie</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] rounded-lg">
+              <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-primary">Nouvelle Catégorie</DialogTitle>
+                  <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouvelle Catégorie</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -223,7 +223,7 @@ const Categories = () => {
                   </div>
                   <Button
                     onClick={handleAddCategory}
-                    className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+                    className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
                   >
                     Ajouter Catégorie
                   </Button>
@@ -236,7 +236,7 @@ const Categories = () => {
 
       <Card className="rounded-lg shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Liste des catégories</CardTitle>
+          <CardTitle className="text-xl font-bold md:text-2xl">Liste des catégories</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -252,62 +252,66 @@ const Categories = () => {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Date de création</TableHead>
-                  {canManageCategories && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.length === 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={canManageCategories ? 3 : 2} className="text-center py-8 text-muted-foreground">
-                      Aucune catégorie trouvée.
-                    </TableCell>
+                    <TableHead className="text-sm md:text-base">Nom</TableHead>
+                    <TableHead className="text-sm md:text-base">Date de création</TableHead>
+                    {canManageCategories && <TableHead className="text-right text-sm md:text-base">Actions</TableHead>}
                   </TableRow>
-                ) : (
-                  categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>{new Date(category.created_at).toLocaleDateString()}</TableCell>
-                      {canManageCategories && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingCategory(category);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteCategory(category.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+                </TableHeader>
+                <TableBody>
+                  {categories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={canManageCategories ? 3 : 2} className="text-center py-8 text-muted-foreground">
+                        Aucune catégorie trouvée.
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    categories.map((category) => (
+                      <TableRow key={category.id}>
+                        <TableCell className="font-medium text-sm md:text-base">{category.name}</TableCell>
+                        <TableCell className="text-sm md:text-base">{new Date(category.created_at).toLocaleDateString()}</TableCell>
+                        {canManageCategories && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingCategory(category);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                className="text-sm"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteCategory(category.id)}
+                                className="text-sm"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-lg">
+        <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-primary">Modifier la Catégorie</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Modifier la Catégorie</DialogTitle>
           </DialogHeader>
           {editingCategory && (
             <div className="space-y-4">
@@ -323,7 +327,7 @@ const Categories = () => {
               </div>
               <Button
                 onClick={handleUpdateCategory}
-                className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+                className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
               >
                 Enregistrer les modifications
               </Button>

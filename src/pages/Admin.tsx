@@ -117,20 +117,20 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Panneau d'administration</h1>
-        <div className="flex space-x-2">
-          <Link to="/coproprietes">
-            <Button variant="outline" className="rounded-full">
+    <div className="min-h-screen flex flex-col bg-background p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 space-y-4 md:space-y-0">
+        <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">Panneau d'administration</h1>
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+          <Link to="/coproprietes" className="w-full md:w-auto">
+            <Button variant="outline" className="rounded-full w-full md:w-auto">
               <Building className="mr-2 h-4 w-4" />
-              Gérer les copropriétés
+              <span className="text-sm">Gérer les copropriétés</span>
             </Button>
           </Link>
-          <Link to="/categories">
-            <Button variant="outline" className="rounded-full">
+          <Link to="/categories" className="w-full md:w-auto">
+            <Button variant="outline" className="rounded-full w-full md:w-auto">
               <ListChecks className="mr-2 h-4 w-4" />
-              Gérer les catégories
+              <span className="text-sm">Gérer les catégories</span>
             </Button>
           </Link>
         </div>
@@ -138,7 +138,7 @@ const Admin = () => {
 
       <Card className="rounded-lg shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Gestion des utilisateurs</CardTitle>
+          <CardTitle className="text-xl font-bold md:text-2xl">Gestion des utilisateurs</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -154,59 +154,62 @@ const Admin = () => {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Rôle</TableHead>
-                  <TableHead>Copropriété</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        user.role === 'Superadmin' ? 'default' :
-                        user.role === 'ASL' ? 'secondary' :
-                        user.role === 'En attente' ? 'outline' : 'default'
-                      }>
-                        {user.role.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.copro || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.actif ? 'default' : 'destructive'}>
-                        {user.actif ? 'Actif' : 'Inactif'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        Modifier
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-sm md:text-base">Email</TableHead>
+                    <TableHead className="text-sm md:text-base">Rôle</TableHead>
+                    <TableHead className="text-sm md:text-base">Copropriété</TableHead>
+                    <TableHead className="text-sm md:text-base">Statut</TableHead>
+                    <TableHead className="text-sm md:text-base">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="text-sm md:text-base">{user.username}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          user.role === 'Superadmin' ? 'default' :
+                          user.role === 'ASL' ? 'secondary' :
+                          user.role === 'En attente' ? 'outline' : 'default'
+                        }>
+                          {user.role.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm md:text-base">{user.copro || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.actif ? 'default' : 'destructive'}>
+                          {user.actif ? 'Actif' : 'Inactif'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingUser(user);
+                            setIsEditDialogOpen(true);
+                          }}
+                          className="text-sm"
+                        >
+                          Modifier
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-lg">
+        <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-primary">Modifier l'utilisateur</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Modifier l'utilisateur</DialogTitle>
             <DialogDescription>
               Modifiez les informations de l'utilisateur ci-dessous.
             </DialogDescription>
@@ -264,7 +267,7 @@ const Admin = () => {
               </div>
               <Button
                 onClick={handleUpdateUser}
-                className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+                className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
               >
                 Enregistrer les modifications
               </Button>

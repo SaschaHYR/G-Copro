@@ -53,9 +53,9 @@ const Sidebar = () => {
   const canManage = user?.role === 'Superadmin' || user?.role === 'ASL';
 
   return (
-    <Card className="w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
+    <Card className="w-full md:w-64 h-full p-4 bg-sidebar-background border-r border-sidebar-border rounded-tr-lg rounded-br-lg shadow-md flex flex-col">
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-semibold text-sidebar-foreground">Filtres</CardTitle>
+        <CardTitle className="text-lg font-semibold text-sidebar-foreground md:text-xl">Filtres</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 flex-1">
         <div>
@@ -111,7 +111,7 @@ const Sidebar = () => {
           onClick={() => navigate('/profile')}
         >
           <User className="mr-2 h-4 w-4" />
-          Mon Profil
+          <span className="text-sm md:text-base">Mon Profil</span>
         </Button>
         {canManage && (
           <>
@@ -121,7 +121,7 @@ const Sidebar = () => {
               onClick={() => navigate('/coproprietes')}
             >
               <Building className="mr-2 h-4 w-4" />
-              Gérer les copropriétés
+              <span className="text-sm md:text-base">Gérer les copropriétés</span>
             </Button>
             <Button
               variant="outline"
@@ -129,7 +129,7 @@ const Sidebar = () => {
               onClick={() => navigate('/categories')}
             >
               <ListChecks className="mr-2 h-4 w-4" />
-              Gérer les catégories
+              <span className="text-sm md:text-base">Gérer les catégories</span>
             </Button>
           </>
         )}

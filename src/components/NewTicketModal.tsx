@@ -242,23 +242,40 @@ const isASL = user?.role === 'ASL';
 return (
   <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger asChild>
-      <Button className="rounded-full px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Nouveau Ticket</Button>
+      <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 md:px-6 md:py-3 md:text-lg">Nouveau Ticket</Button>
     </DialogTrigger>
-    <DialogContent className="sm:max-w-[425px] rounded-lg">
+    <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
       <DialogHeader>
-        <DialogTitle className="text-2xl font-bold text-primary">Nouveau Ticket</DialogTitle>
+        <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouveau Ticket</DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="titre" className="text-sm font-medium text-foreground">Titre</Label>
-          <Input
-            id="titre"
-            value={titre}
-            onChange={(e) => setTitre(e.target.value)}
-            required
-            className="rounded-md border-border focus:ring-primary focus:border-primary"
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor="titre" className="text-sm font-medium text-foreground">Titre</Label>
+            <Input
+              id="titre"
+              value={titre}
+              onChange={(e) => setTitre(e.target.value)}
+              required
+              className="rounded-md border-border focus:ring-primary focus:border-primary"
+            />
+          </div>
+          <div>
+            <Label htmlFor="priorite" className="text-sm font-medium text-foreground">Priorité</Label>
+            <Select onValueChange={setPriorite} value={priorite} required>
+              <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                <SelectValue placeholder="Sélectionner une priorité" />
+              </SelectTrigger>
+              <SelectContent className="rounded-md">
+                <SelectItem value="Faible">Faible</SelectItem>
+                <SelectItem value="Moyenne">Moyenne</SelectItem>
+                <SelectItem value="Haute">Haute</SelectItem>
+                <SelectItem value="Urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
         <div>
           <Label htmlFor="description" className="text-sm font-medium text-foreground">Description</Label>
           <Textarea
@@ -266,65 +283,53 @@ return (
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
-            className="rounded-md border-border focus:ring-primary focus:border-primary"
+            className="rounded-md border-border focus:ring-primary focus:border-primary min-h-[100px]"
           />
         </div>
-        <div>
-          <Label htmlFor="categorie" className="text-sm font-medium text-foreground">Catégorie</Label>
-          <Select onValueChange={setCategorie} value={categorie} required disabled={isLoadingCategories}>
-            <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-              <SelectValue placeholder="Sélectionner une catégorie" />
-            </SelectTrigger>
-            <SelectContent className="rounded-md">
-              {isLoadingCategories ? (
-                <SelectItem value="loading" disabled>Chargement...</SelectItem>
-              ) : (
-                categories?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Only show copro selection if user is not ASL */}
-        {!isASL && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-            <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
+            <Label htmlFor="categorie" className="text-sm font-medium text-foreground">Catégorie</Label>
+            <Select onValueChange={setCategorie} value={categorie} required disabled={isLoadingCategories}>
               <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                <SelectValue placeholder="Sélectionner une copropriété" />
+                <SelectValue placeholder="Sélectionner une catégorie" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                {isLoadingCoproprietes ? (
+                {isLoadingCategories ? (
                   <SelectItem value="loading" disabled>Chargement...</SelectItem>
                 ) : (
-                  coproprietes?.map((c) => (
-                    <SelectItem key={c.id} value={c.nom}>
-                      {c.nom}
+                  categories?.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        <div>
-          <Label htmlFor="priorite" className="text-sm font-medium text-foreground">Priorité</Label>
-          <Select onValueChange={setPriorite} value={priorite} required>
-            <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-              <SelectValue placeholder="Sélectionner une priorité" />
-            </SelectTrigger>
-            <SelectContent className="rounded-md">
-              <SelectItem value="Faible">Faible</SelectItem>
-              <SelectItem value="Moyenne">Moyenne</SelectItem>
-              <SelectItem value="Haute">Haute</SelectItem>
-              <SelectItem value="Urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Only show copro selection if user is not ASL */}
+          {!isASL && (
+            <div>
+              <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
+              <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
+                <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                  <SelectValue placeholder="Sélectionner une copropriété" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {isLoadingCoproprietes ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : (
+                    coproprietes?.map((c) => (
+                      <SelectItem key={c.id} value={c.nom}>
+                        {c.nom}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Only show destinataire selection if user is not ASL */}
@@ -368,7 +373,7 @@ return (
             className="rounded-md border-border focus:ring-primary focus:border-primary"
           />
         </div>
-        <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={isSubmitting}>
+        <Button type="submit" className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg" disabled={isSubmitting}>
           {isSubmitting ? 'Création en cours...' : 'Créer Ticket'}
         </Button>
       </form>

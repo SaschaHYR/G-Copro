@@ -58,17 +58,17 @@ const TicketDataTable = () => {
   return (
     <div className="overflow-x-auto rounded-lg shadow-lg border border-border">
       <Table>
-        <TableHeader className="bg-primary"> {/* Changed from bg-secondary to bg-primary */}
+        <TableHeader className="bg-primary">
           <TableRow>
-            <TableHead className="text-primary-foreground rounded-tl-lg">ID</TableHead>
-            <TableHead className="text-primary-foreground">Titre</TableHead>
-            <TableHead className="text-primary-foreground">Copro</TableHead>
-            <TableHead className="text-primary-foreground">Créé par</TableHead>
-            <TableHead className="text-primary-foreground">Statut</TableHead>
-            <TableHead className="text-primary-foreground">Priorité</TableHead>
-            <TableHead className="text-primary-foreground">Date création</TableHead>
-            <TableHead className="text-primary-foreground">Date de dernière action</TableHead>
-            <TableHead className="text-primary-foreground rounded-tr-lg">Actions</TableHead>
+            <TableHead className="text-primary-foreground rounded-tl-lg text-sm md:text-base">ID</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Titre</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Copro</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Créé par</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Statut</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Priorité</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Date création</TableHead>
+            <TableHead className="text-primary-foreground text-sm md:text-base">Date de dernière action</TableHead>
+            <TableHead className="text-primary-foreground rounded-tr-lg text-sm md:text-base">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -81,13 +81,13 @@ const TicketDataTable = () => {
           ) : (
             tickets.map((ticket) => (
               <TableRow key={ticket.id} className="hover:bg-muted/50 transition-colors">
-                <TableCell className="font-medium">{ticket.ticket_id_unique}</TableCell>
-                <TableCell>{ticket.titre}</TableCell>
-                <TableCell>{ticket.copro}</TableCell>
-                <TableCell>{ticket.createur?.first_name} {ticket.createur?.last_name}</TableCell>
+                <TableCell className="font-medium text-sm md:text-base">{ticket.ticket_id_unique}</TableCell>
+                <TableCell className="text-sm md:text-base">{ticket.titre}</TableCell>
+                <TableCell className="text-sm md:text-base">{ticket.copro}</TableCell>
+                <TableCell className="text-sm md:text-base">{ticket.createur?.first_name} {ticket.createur?.last_name}</TableCell>
                 <TableCell>
                   <Badge
-                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    className="rounded-full px-2 py-1 text-xs font-semibold md:px-3 md:py-1"
                     variant={
                       ticket.status === 'ouvert'
                         ? 'default'
@@ -101,11 +101,11 @@ const TicketDataTable = () => {
                     {ticket.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{ticket.priorite}</TableCell>
-                <TableCell>{new Date(ticket.date_create).toLocaleDateString()}</TableCell>
-                <TableCell>{ticket.date_update ? new Date(ticket.date_update).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell className="text-sm md:text-base">{ticket.priorite}</TableCell>
+                <TableCell className="text-sm md:text-base">{new Date(ticket.date_create).toLocaleDateString()}</TableCell>
+                <TableCell className="text-sm md:text-base">{ticket.date_update ? new Date(ticket.date_update).toLocaleDateString() : 'N/A'}</TableCell>
                 <TableCell>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-1 md:space-x-2">
                     <TicketDetailModal ticket={ticket} />
                     <ReplyModal ticketId={ticket.id} onReplySuccess={invalidateTickets} />
                     <CloseModal

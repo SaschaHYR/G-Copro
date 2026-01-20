@@ -20,7 +20,6 @@ const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onClose
   const { toast } = useToast();
 
   const isClosed = ticketStatus === 'cloture';
-  // Removed unused actionType variable
   const ActionType = isClosed ? 'Réouvrir' : 'Clôturer';
 
   const handleClose = async () => {
@@ -32,7 +31,6 @@ const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onClose
       });
       return;
     }
-
     setLoading(true);
 
     try {
@@ -71,13 +69,13 @@ const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onClose
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full">
+        <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
           {ActionType}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
+      <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">
+          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">
             {ActionType} le Ticket {ticketId}
           </DialogTitle>
         </DialogHeader>
@@ -88,7 +86,7 @@ const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onClose
         </p>
         <Button
           onClick={handleClose}
-          className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+          className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
           disabled={loading}
         >
           {loading ? 'Traitement en cours...' : ActionType}

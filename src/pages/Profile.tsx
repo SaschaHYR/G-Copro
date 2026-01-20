@@ -100,9 +100,9 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Mon Profil</h1>
+    <div className="min-h-screen flex flex-col bg-background p-4 md:p-6">
+      <div className="flex justify-between items-center mb-4 md:mb-6">
+        <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">Mon Profil</h1>
         <Button
           variant="outline"
           size="icon"
@@ -116,15 +116,15 @@ const Profile = () => {
 
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="flex flex-col items-center gap-4">
-          <Avatar className="w-24 h-24">
+          <Avatar className="w-20 h-20 md:w-24 md:h-24">
             <AvatarImage src="/placeholder.svg" alt="Photo de profil" />
-            <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
+            <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground md:text-2xl">
               {user.first_name ? user.first_name.charAt(0) : 'U'}
               {user.last_name ? user.last_name.charAt(0) : ''}
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <CardTitle className="text-2xl font-bold">
+            <CardTitle className="text-xl font-bold md:text-2xl">
               {user.first_name} {user.last_name}
             </CardTitle>
             <Badge
@@ -143,20 +143,20 @@ const Profile = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium">{user.username}</p>
+              <p className="font-medium text-sm md:text-base">{user.username}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Copropriété</p>
-              <p className="font-medium">{user.copro || 'N/A'}</p>
+              <p className="font-medium text-sm md:text-base">{user.copro || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Statut</p>
-              <p className="font-medium">{user.actif ? 'Actif' : 'Inactif'}</p>
+              <p className="font-medium text-sm md:text-base">{user.actif ? 'Actif' : 'Inactif'}</p>
             </div>
           </div>
 
           <div className="pt-4 border-t border-border">
-            <h3 className="text-lg font-semibold mb-4">Informations personnelles</h3>
+            <h3 className="text-base font-semibold mb-4 md:text-lg">Informations personnelles</h3>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="first_name" className="text-sm font-medium text-muted-foreground">Prénom</Label>
@@ -185,7 +185,7 @@ const Profile = () => {
                 <Button
                   variant="outline"
                   onClick={handleEdit}
-                  className="rounded-full"
+                  className="rounded-full px-3 py-1 text-sm"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Modifier
@@ -195,7 +195,7 @@ const Profile = () => {
                   <Button
                     variant="outline"
                     onClick={handleCancel}
-                    className="rounded-full"
+                    className="rounded-full px-3 py-1 text-sm"
                     disabled={isSaving}
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -203,7 +203,7 @@ const Profile = () => {
                   </Button>
                   <Button
                     onClick={handleSave}
-                    className="rounded-full"
+                    className="rounded-full px-3 py-1 text-sm"
                     disabled={isSaving}
                   >
                     <Save className="h-4 w-4 mr-2" />

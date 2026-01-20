@@ -1,4 +1,3 @@
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import Sidebar from "@/components/Sidebar";
 import TicketDataTable from "@/components/TicketDataTable";
 import NewTicketModal from "@/components/NewTicketModal";
@@ -23,7 +22,6 @@ const Index = () => {
             <TicketDataTable />
           </main>
         </div>
-        <MadeWithDyad />
         <MobileSidebar />
       </div>
     </TicketFilterProvider>

@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, UserRole } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
 import { Building, ListChecks } from 'lucide-react';
@@ -207,6 +207,9 @@ const Admin = () => {
         <DialogContent className="sm:max-w-[425px] rounded-lg">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Modifier l'utilisateur</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de l'utilisateur ci-dessous.
+            </DialogDescription>
           </DialogHeader>
           {editingUser && (
             <div className="space-y-4">

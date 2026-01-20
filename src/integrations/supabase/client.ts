@@ -18,18 +18,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       eventsPerSecond: 10
     }
   },
-  // Global fetch options
-  global: {
-    fetch: (url, options = {}) => {
-      // Add security headers
-      const headers = new Headers(options.headers);
-      headers.set('X-Client-Info', 'web-app');
-      headers.set('X-Requested-With', 'XMLHttpRequest');
-
-      // Remove credentials to avoid CORS issues with wildcard origins
-      const newOptions = { ...options, headers };
-
-      return fetch(url, newOptions);
-    }
-  }
+  // Removed global.fetch override to prevent potential conflicts
+  // with Supabase client's internal fetch logic and credential handling.
 });

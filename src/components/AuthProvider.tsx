@@ -26,11 +26,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadingRef = useRef(loading);
   useEffect(() => {
     loadingRef.current = loading;
+    console.log(`[AuthProvider] loading state updated: ${loading}, loadingRef.current: ${loadingRef.current}`);
   }, [loading]);
 
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
+    console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
     try {
       const { data, error } = await supabase
         .from('user_informations')
@@ -153,8 +155,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const handleAuthStateChange = async (event: string, session: any | null) => {
-      console.log('[AuthProvider] Auth state change:', event);
-      if (!isMounted) return;
+      console.log(`[AuthProvider] Auth state change: ${event}, current loadingRef.current: ${loadingRef.current}`);
+      if (!isMounted) {
+        console.log(`[AuthProvider] handleAuthStateChange: Component unmounted, ignoring event ${event}`);
+        return;
+      }
 
       // IMPORTANT: If the component is still in its initial loading phase,
       // we should not update the user state from this listener for SIGNED_IN events.
@@ -252,6 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           console.log('[AuthProvider] Authentication initialization completed, setting loading to false.');
           setLoading(false); // This must be the final step of initial load
+          console.log(`[AuthProvider] Final state after init: loading=${loading}, error=${error}, user=${user ? user.username : 'null'}`);
         }
       }
     };
@@ -269,7 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserData]); // Only fetchUserData as a dependency, as navigate is stable.
+  }, [fetchUserData]); // Removed loading, error, user from dependencies to prevent unnecessary re-runs.
 
   if (loading) { 
     return (

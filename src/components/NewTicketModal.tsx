@@ -90,10 +90,37 @@ const NewTicketModal = () => {
     }
   }, [open, user?.role]);
 
-  const generateUniqueTicketId = () => {
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4 random alphanumeric chars
-    return `TICKET-${timestamp}-${random}`;
+  const generateSequentialTicketId = async () => {
+    try {
+      // Get the highest existing ticket ID
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('ticket_id_unique')
+        .order('ticket_id_unique', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      let nextId = '0000000001'; // Default starting ID
+
+      if (data && data.length > 0 && data[0].ticket_id_unique) {
+        // Extract the numeric part and increment
+        const lastId = data[0].ticket_id_unique;
+        const numericPart = parseInt(lastId);
+        if (!isNaN(numericPart)) {
+          const nextNumeric = numericPart + 1;
+          nextId = nextNumeric.toString().padStart(10, '0');
+        }
+      }
+
+      return nextId;
+    } catch (error) {
+      console.error('Error generating sequential ticket ID:', error);
+      // Fallback to timestamp-based ID if there's an error
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `TICKET-${timestamp}-${random}`;
+    }
   };
 
   const validateForm = () => {
@@ -176,6 +203,9 @@ const handleSubmit = async (e: React.FormEvent) => {
   setIsSubmitting(true);
 
   try {
+    // Generate sequential ticket ID
+    const ticketIdUnique = await generateSequentialTicketId();
+
     // Determine copro and destinataire based on user role
     let ticketCopro = copro;
     let ticketDestinataire = destinataire as UserRole;
@@ -194,7 +224,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
-      ticket_id_unique: generateUniqueTicketId(),
+      ticket_id_unique: ticketIdUnique,
       titre,
       description,
       categorie,
@@ -219,7 +249,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     toast({
       title: "Ticket créé avec succès",
-      description: `Nouveau ticket: ${titre} (${newTicket.ticket_id_unique})`,
+      description: `Nouveau ticket: ${titre} (${ticketIdUnique})`,
     });
     setOpen(false);
     // Invalidate the 'tickets' query to refetch the list

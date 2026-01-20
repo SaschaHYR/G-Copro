@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +21,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [degradedMode, setDegradedMode] = useState(false);
   const navigate = useNavigate();
+
+  // Use a ref to track the loading state without making it a useEffect dependency
+  const loadingRef = useRef(loading);
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
@@ -150,6 +156,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthProvider] Auth state change:', event);
       if (!isMounted) return;
 
+      // IMPORTANT: If the component is still in its initial loading phase,
+      // we should not update the user state from this listener for SIGNED_IN events.
+      // The initial user state will be set by the `initializeAuth` function.
+      // This prevents race conditions where SIGNED_IN fires before initial check completes,
+      // potentially causing a re-render that interrupts the initial load.
+      if (loadingRef.current && event === 'SIGNED_IN') {
+        console.log('[AuthProvider] Deferring SIGNED_IN state update during initial load.');
+        return;
+      }
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session) {
           try {
@@ -193,10 +209,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
 
-        // Handle AuthSessionMissingError gracefully: it means no session, not a critical error.
         if (userError && userError.name !== 'AuthSessionMissingError') {
           console.error('[AuthProvider] Supabase getUser critical error during init:', userError);
-          throw userError; // Re-throw only critical errors
+          throw userError;
         }
 
         if (supabaseUser) {
@@ -219,12 +234,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          // This branch is taken if supabaseUser is null (either no session or AuthSessionMissingError)
           console.log('[AuthProvider] No active user found during init or session missing.');
           if (isMounted) {
             setUser(null);
-            setError(null); // Clear any previous errors
-            setDegradedMode(false); // Ensure not in degraded mode for missing session
+            setError(null);
+            setDegradedMode(false);
           }
         }
       } catch (err: any) {

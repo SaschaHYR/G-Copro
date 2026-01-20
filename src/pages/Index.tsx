@@ -4,6 +4,7 @@ import TicketDataTable from "@/components/TicketDataTable";
 import NewTicketModal from "@/components/NewTicketModal";
 import Header from "@/components/Header";
 import { TicketFilterProvider } from "@/contexts/TicketFilterContext";
+import MobileSidebar from "@/components/MobileSidebar";
 
 const Index = () => {
   return (
@@ -11,7 +12,7 @@ const Index = () => {
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
         <div className="flex flex-1 flex-col md:flex-row">
-          <div className="w-full md:w-64">
+          <div className="w-full md:w-64 hidden md:block">
             <Sidebar />
           </div>
           <main className="flex-1 p-4 md:p-6">
@@ -23,6 +24,7 @@ const Index = () => {
           </main>
         </div>
         <MadeWithDyad />
+        <MobileSidebar />
       </div>
     </TicketFilterProvider>
   );

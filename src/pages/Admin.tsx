@@ -23,6 +23,8 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [coproprietes, setCoproprietes] = useState<{ id: string; nom: string }[]>([]);
+  const [loadingCoproprietes, setLoadingCoproprietes] = useState(true);
 
   const fetchUsers = async () => {
     try {
@@ -45,8 +47,30 @@ const Admin = () => {
     }
   };
 
+  const fetchCoproprietes = async () => {
+    try {
+      setLoadingCoproprietes(true);
+      const { data, error } = await supabase
+        .from('coproprietes')
+        .select('id, nom')
+        .order('nom', { ascending: true });
+
+      if (error) throw error;
+      setCoproprietes(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de charger les copropriétés",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCoproprietes(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchCoproprietes();
   }, []);
 
   const handleUpdateUser = async () => {
@@ -196,12 +220,23 @@ const Admin = () => {
               </div>
               <div>
                 <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-                <Input
-                  id="copro"
+                <Select
+                  onValueChange={(value) => setEditingUser({...editingUser, copro: value})}
                   value={editingUser.copro || ''}
-                  onChange={(e) => setEditingUser({...editingUser, copro: e.target.value})}
-                  className="rounded-md border-border focus:ring-primary focus:border-primary"
-                />
+                  disabled={loadingCoproprietes}
+                >
+                  <SelectTrigger className="rounded-md border-border bg-background text-foreground">
+                    <SelectValue placeholder={loadingCoproprietes ? "Chargement..." : "Sélectionner une copropriété"} />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    <SelectItem value="">Aucune</SelectItem>
+                    {coproprietes.map((copro) => (
+                      <SelectItem key={copro.id} value={copro.nom}>
+                        {copro.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox

@@ -33,12 +33,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.warn(`[AuthProvider] fetchUserData for ${userId} timed out after 15 seconds.`);
+      abortController.abort();
+    }, 15000); // 15 seconds timeout
+
     try {
       const { data, error } = await supabase
         .from('user_informations')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .maybeSingle({ signal: abortController.signal }); // Pass the signal to the request
+
+      clearTimeout(timeoutId); // Clear timeout if request completes
 
       if (error) {
         console.error('[AuthProvider] User data fetch error:', error);
@@ -53,7 +61,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthProvider] User data fetched successfully:', data);
       return data;
     } catch (err: any) {
-      console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      clearTimeout(timeoutId); // Ensure timeout is cleared on error too
+      if (err.name === 'AbortError') {
+        console.error('[AuthProvider] User data fetch aborted (likely due to timeout).');
+      } else {
+        console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      }
       return null;
     }
   }, []);
@@ -155,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
     const handleAuthStateChange = async (event: string, session: any | null) => {
-      console.log(`[AuthProvider] Auth state change: ${event}, current loadingRef.current: ${loadingRef.current}`);
+      console.log(`[AuthProvider] Auth state change: ${event}, current loadingRef.current: ${loadingRef.current}, isMounted: ${isMounted}`);
       if (!isMounted) {
         console.log(`[AuthProvider] handleAuthStateChange: Component unmounted, ignoring event ${event}`);
         return;
@@ -175,29 +188,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session) {
           try {
             const userData = await fetchUserData(session.user.id);
-            if (userData) {
-              console.log('[AuthProvider] User signed in/refreshed:', userData.username);
-              setUser(userData);
-              setError(null);
-              setDegradedMode(false);
-            } else {
-              console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
-              await supabase.auth.signOut();
-              setUser(null);
-              setError('User profile not found. Please sign up or contact support.');
+            if (isMounted) { // Check isMounted again after async operation
+              if (userData) {
+                console.log('[AuthProvider] User signed in/refreshed:', userData.username);
+                setUser(userData);
+                setError(null);
+                setDegradedMode(false);
+              } else {
+                console.warn('[AuthProvider] User not found in database on auth state change. Signing out.');
+                await supabase.auth.signOut();
+                setUser(null);
+                setError('User profile not found. Please sign up or contact support.');
+              }
             }
           } catch (userError: any) {
             console.error('[AuthProvider] Error fetching user data on auth state change:', userError.message);
             await supabase.auth.signOut();
-            setUser(null);
-            setError(userError.message || 'Failed to load user profile on auth change.');
+            if (isMounted) { // Check isMounted again after async operation
+              setUser(null);
+              setError(userError.message || 'Failed to load user profile on auth change.');
+            }
           }
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('[AuthProvider] User signed out.');
-        setUser(null);
-        setError(null);
-        setDegradedMode(false);
+        if (isMounted) { // Check isMounted before setting state
+          setUser(null);
+          setError(null);
+          setDegradedMode(false);
+        }
       }
     };
 
@@ -223,24 +242,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[AuthProvider] Active user found during init, fetching profile data...');
           const userData = await fetchUserData(supabaseUser.id);
 
-          if (userData) {
-            console.log('[AuthProvider] User data loaded successfully during init');
-            if (isMounted) {
+          if (isMounted) { // Check isMounted again after async operation
+            if (userData) {
+              console.log('[AuthProvider] User data loaded successfully during init');
               setUser(userData);
               setError(null);
               setDegradedMode(false);
-            }
-          } else {
-            console.warn('[AuthProvider] User found in auth.users but not in public.user_informations during init. Signing out.');
-            await supabase.auth.signOut();
-            if (isMounted) {
+            } else {
+              console.warn('[AuthProvider] User found in auth.users but not in public.user_informations during init. Signing out.');
+              await supabase.auth.signOut();
               setUser(null);
               setError('User profile not found. Please sign up or contact support.');
             }
           }
         } else {
           console.log('[AuthProvider] No active user found during init or session missing.');
-          if (isMounted) {
+          if (isMounted) { // Check isMounted before setting state
             setUser(null);
             setError(null);
             setDegradedMode(false);
@@ -248,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err: any) {
         console.error('[AuthProvider] Error during authentication initialization:', err.message);
-        if (isMounted) {
+        if (isMounted) { // Check isMounted before setting state
           setError(err.message || 'Failed to initialize authentication. Please check your connection.');
           setUser(null);
           setDegradedMode(true);

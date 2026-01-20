@@ -22,6 +22,7 @@ const NewTicketModal = () => {
   const [priorite, setPriorite] = useState('');
   const [piecesJointes, setPiecesJointes] = useState<File[]>([]);
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,8 +96,73 @@ const NewTicketModal = () => {
     return `TICKET-${timestamp}-${random}`;
   };
 
+  const validateForm = () => {
+    if (!titre.trim()) {
+      toast({
+        title: "Champ requis",
+        description: "Le titre est obligatoire",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!description.trim()) {
+      toast({
+        title: "Champ requis",
+        description: "La description est obligatoire",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!categorie) {
+      toast({
+        title: "Champ requis",
+        description: "La catégorie est obligatoire",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!priorite) {
+      toast({
+        title: "Champ requis",
+        description: "La priorité est obligatoire",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // For non-ASL users, check copro and destinataire
+    if (user?.role !== 'ASL') {
+      if (!copro) {
+        toast({
+          title: "Champ requis",
+          description: "La copropriété est obligatoire",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      if (!destinataire) {
+        toast({
+          title: "Champ requis",
+          description: "Le destinataire est obligatoire",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
 
     if (!user) {
       toast({
@@ -107,37 +173,42 @@ const NewTicketModal = () => {
       return;
     }
 
-    // For ASL users, automatically set copro and destinataire
-    let ticketCopro = copro;
-    let ticketDestinataire = destinataire as UserRole;
+    setIsSubmitting(true);
 
-    if (user.role === 'ASL') {
-      ticketCopro = ''; // ASL doesn't need to select a copro
-      ticketDestinataire = 'ASL'; // ASL is always the destinataire
-    }
+    try {
+      // For ASL users, automatically set copro and destinataire
+      let ticketCopro = copro;
+      let ticketDestinataire = destinataire as UserRole;
 
-    const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
-      ticket_id_unique: generateUniqueTicketId(),
-      titre,
-      description,
-      categorie,
-      copro: ticketCopro,
-      createur_id: user.id,
-      destinataire_role: ticketDestinataire,
-      status: 'ouvert',
-      priorite,
-      pieces_jointes: piecesJointes.map(file => file.name), // Store file names for now
-    };
+      if (user.role === 'ASL') {
+        ticketCopro = 'ASL'; // Set copro to 'ASL' for ASL users
+        ticketDestinataire = 'ASL'; // ASL is always the destinataire
+      }
 
-    const { error } = await supabase.from('tickets').insert([newTicket]);
+      const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
+        ticket_id_unique: generateUniqueTicketId(),
+        titre,
+        description,
+        categorie,
+        copro: ticketCopro,
+        createur_id: user.id,
+        destinataire_role: ticketDestinataire,
+        status: 'ouvert',
+        priorite,
+        pieces_jointes: piecesJointes.map(file => file.name), // Store file names for now
+      };
 
-    if (error) {
-      toast({
-        title: "Erreur de création de ticket",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+      console.log('Creating ticket with data:', newTicket);
+
+      const { data, error } = await supabase.from('tickets').insert([newTicket]);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Ticket created successfully:', data);
+
       toast({
         title: "Ticket créé avec succès",
         description: `Nouveau ticket: ${titre} (${newTicket.ticket_id_unique})`,
@@ -145,6 +216,15 @@ const NewTicketModal = () => {
       setOpen(false);
       // Invalidate the 'tickets' query to refetch the list
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    } catch (error: any) {
+      console.error('Error creating ticket:', error);
+      toast({
+        title: "Erreur de création de ticket",
+        description: error.message || "Une erreur est survenue lors de la création du ticket",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -280,8 +360,8 @@ const NewTicketModal = () => {
               className="rounded-md border-border focus:ring-primary focus:border-primary"
             />
           </div>
-          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300">
-            Créer Ticket
+          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={isSubmitting}>
+            {isSubmitting ? 'Création en cours...' : 'Créer Ticket'}
           </Button>
         </form>
       </DialogContent>

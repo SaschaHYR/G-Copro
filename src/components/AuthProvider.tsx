@@ -39,9 +39,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('user_informations')
-        .select('*')
+        .select('id, username, role, copro, first_name, last_name, actif') // Explicitly select columns
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1); // Use limit(1) instead of maybeSingle()
 
       clearTimeout(timeoutId); // Clear timeout if request completes
 
@@ -50,13 +50,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      if (!data) {
+      if (!data || data.length === 0) { // Check for empty array
         console.warn('[AuthProvider] No user data found for ID:', userId);
         return null;
       }
 
-      console.log('[AuthProvider] User data fetched successfully:', data);
-      return data;
+      console.log('[AuthProvider] User data fetched successfully:', data[0]);
+      return data[0] as User; // Return the first item
     } catch (err: any) {
       clearTimeout(timeoutId); // Ensure timeout is cleared on error too
       if (err.name === 'AbortError') {

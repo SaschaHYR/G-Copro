@@ -20,8 +20,26 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
   const [message, setMessage] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [ticketTitle, setTicketTitle] = useState('Chargement...');
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Fetch ticket title when modal opens
+  const fetchTicketTitle = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('titre')
+        .eq('id', ticketId)
+        .single();
+
+      if (error) throw error;
+      setTicketTitle(data?.titre || `Ticket ${ticketId}`);
+    } catch (error: any) {
+      console.error('Error fetching ticket title:', error.message);
+      setTicketTitle(`Ticket ${ticketId}`);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +95,7 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
       if (ticketUpdateError) throw ticketUpdateError;
 
       toast({
-        title: `Réponse au ticket ${ticketId}`,
+        title: `Réponse au ticket ${ticketTitle}`,
         description: "Votre réponse a été envoyée avec succès.",
       });
       setOpen(false);
@@ -96,7 +114,12 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (isOpen) {
+        fetchTicketTitle();
+      }
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-full px-3 py-1 text-sm md:px-4 md:py-2">
           Répondre
@@ -104,7 +127,7 @@ const ReplyModal: React.FC<ReplyModalProps> = ({ ticketId, onReplySuccess }) => 
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Répondre au Ticket {ticketId}</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Répondre au Ticket: {ticketTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

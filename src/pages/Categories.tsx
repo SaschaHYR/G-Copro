@@ -55,6 +55,7 @@ const Categories = () => {
   }, []);
 
   const canManageCategories = user?.role === 'Superadmin' || user?.role === 'ASL';
+  const isSuperadmin = user?.role === 'Superadmin'; // New check for Superadmin
 
   const handleAddCategory = async () => {
     if (!canManageCategories) {
@@ -188,12 +189,14 @@ const Categories = () => {
               Accueil
             </Button>
           </Link>
-          <Link to="/admin">
-            <Button variant="outline" className="rounded-full">
-              <Home className="mr-2 h-4 w-4" />
-              Retour à l'Admin
-            </Button>
-          </Link>
+          {isSuperadmin && ( // Only show "Retour à l'Admin" for Superadmin
+            <Link to="/admin">
+              <Button variant="outline" className="rounded-full">
+                <Home className="mr-2 h-4 w-4" />
+                Retour à l'Admin
+              </Button>
+            </Link>
+          )}
           {canManageCategories && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>

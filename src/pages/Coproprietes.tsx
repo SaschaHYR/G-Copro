@@ -33,7 +33,7 @@ interface Copropriete {
 const Coproprietes = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [coproprietes, setCoproprietes] = useState<Copropriete[]>([]);
+  const [coproprietes, setCoproprietes] = useState<Copropriete[]>(([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -78,6 +78,7 @@ const Coproprietes = () => {
   }, []);
 
   const canManageCoproprietes = user?.role === 'Superadmin' || user?.role === 'ASL';
+  const isSuperadmin = user?.role === 'Superadmin'; // New check for Superadmin
 
   const handleAddCopropriete = async () => {
     if (!canManageCoproprietes) {
@@ -226,12 +227,14 @@ const Coproprietes = () => {
               Accueil
             </Button>
           </Link>
-          <Link to="/admin">
-            <Button variant="outline" className="rounded-full">
-              <Home className="mr-2 h-4 w-4" />
-              Retour à l'Admin
-            </Button>
-          </Link>
+          {isSuperadmin && ( // Only show "Retour à l'Admin" for Superadmin
+            <Link to="/admin">
+              <Button variant="outline" className="rounded-full">
+                <Home className="mr-2 h-4 w-4" />
+                Retour à l'Admin
+              </Button>
+            </Link>
+          )}
           {canManageCoproprietes && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>

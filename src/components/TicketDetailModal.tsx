@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Skeleton } from './ui/skeleton';
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -20,7 +21,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Commentaire[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [userNames, setUserNames] = useState<Record<string, { first_name: string; last_name: string }>>({});
   const { toast } = useToast();
 
   // Directly use the joined user data from the ticket prop
@@ -65,8 +65,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
 
   const getUserDisplayName = (userId: string) => {
     // Check if we have the user data from comments
-    const commentUser = comments.find(c => c.auteur === userId)?.auteur;
-    if (commentUser) {
+    const comment = comments.find(c => c.auteur === userId);
+    const commentUser = comment?.auteur;
+    if (commentUser && typeof commentUser === 'object' && 'first_name' in commentUser) {
       return `${commentUser.first_name || ''} ${commentUser.last_name || ''}`.trim() || 'Utilisateur';
     }
 

@@ -14,7 +14,7 @@ import Admin from "./pages/Admin";
 import AdminRoute from "./components/AdminRoute";
 import Coproprietes from "./pages/Coproprietes";
 import Categories from "./pages/Categories";
-import ASLAndSuperadminRoute from "./components/ASLAndSuperadminRoute"; // Import the new route component
+import ASLAndSuperadminRoute from "./components/ASLAndSuperadminRoute";
 
 const queryClient = new QueryClient();
 
@@ -31,9 +31,8 @@ const App = () => (
             <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            <Route path="/coproprietes" element={<ASLAndSuperadminRoute><Coproprietes /></ASLAndSuperadminRoute>} /> {/* Use new route component */}
-            <Route path="/categories" element={<ASLAndSuperadminRoute><Categories /></ASLAndSuperadminRoute>} /> {/* Use new route component */}
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/coproprietes" element={<ASLAndSuperadminRoute><Coproprietes /></ASLAndSuperadminRoute>} />
+            <Route path="/categories" element={<ASLAndSuperadminRoute><Categories /></ASLAndSuperadminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

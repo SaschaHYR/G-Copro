@@ -3,72 +3,64 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
 import { useToast } from './ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthProvider';
 
 interface CloseModalProps {
   ticketId: string;
-  ticketStatus: 'ouvert' | 'en cours' | 'transmis' | 'cloture';
-  onCloseSuccess: () => void; // Callback to refresh ticket list
+  ticketStatus: string;
+  onCloseSuccess: () => void;
 }
 
 const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onCloseSuccess }) => {
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState(''); // Message for closing, not stored as a comment in current schema
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
   const isClosed = ticketStatus === 'cloture';
-  const actionType = isClosed ? 'réouvrir' : 'clôturer';
+  // Removed unused actionType variable
   const ActionType = isClosed ? 'Réouvrir' : 'Clôturer';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleClose = async () => {
     if (!user) {
       toast({
         title: "Erreur",
-        description: "Vous devez être connecté pour " + (isClosed ? "réouvrir" : "clôturer") + " un ticket.",
+        description: "Vous devez être connecté pour effectuer cette action.",
         variant: "destructive",
       });
       return;
     }
+
     setLoading(true);
 
     try {
-      const updateData = isClosed
-        ? {
-            status: 'ouvert',
-            date_update: new Date().toISOString(),
-          }
-        : {
-            status: 'cloture',
-            cloture_par: user.id,
-            cloture_date: new Date().toISOString(),
-            date_update: new Date().toISOString(),
-          };
+      const newStatus = isClosed ? 'ouvert' : 'cloture';
 
-      const { error: ticketUpdateError } = await supabase
+      const { error } = await supabase
         .from('tickets')
-        .update(updateData)
+        .update({
+          status: newStatus,
+          cloture_par: isClosed ? null : user.id,
+          cloture_date: isClosed ? null : new Date().toISOString(),
+          date_update: new Date().toISOString()
+        })
         .eq('id', ticketId);
 
-      if (ticketUpdateError) throw ticketUpdateError;
+      if (error) throw error;
 
       toast({
-        title: `Ticket ${ticketId} ${isClosed ? 'réouvert' : 'clôturé'}`,
+        title: `Ticket ${isClosed ? 'réouvert' : 'clôturé'}`,
         description: `Le ticket a été ${isClosed ? 'réouvert' : 'clôturé'} avec succès.`,
       });
+
       setOpen(false);
-      setMessage('');
-      onCloseSuccess(); // Refresh the ticket list
+      onCloseSuccess();
     } catch (error: any) {
       toast({
-        title: `Erreur lors de la ${isClosed ? 'réouverture' : 'clôture'} du ticket`,
-        description: error.message || "Une erreur inattendue est survenue.",
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la mise à jour du ticket.",
         variant: "destructive",
       });
     } finally {
@@ -85,23 +77,22 @@ const CloseModal: React.FC<CloseModalProps> = ({ ticketId, ticketStatus, onClose
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] rounded-lg">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-primary">{ActionType} le Ticket {ticketId}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">
+            {ActionType} le Ticket {ticketId}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="message" className="text-sm font-medium text-foreground">Message {isClosed ? 'de réouverture' : 'de clôture'} (optionnel)</Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              disabled={loading}
-              className="rounded-md border-border focus:ring-primary focus:border-primary"
-            />
-          </div>
-          <Button type="submit" className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300" disabled={loading}>
-            {loading ? `${ActionType} en cours...` : ActionType}
-          </Button>
-        </form>
+        <p className="text-muted-foreground mb-4">
+          {isClosed
+            ? 'Êtes-vous sûr de vouloir réouvrir ce ticket ?'
+            : 'Êtes-vous sûr de vouloir clôturer ce ticket ?'}
+        </p>
+        <Button
+          onClick={handleClose}
+          className="w-full rounded-full py-2 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300"
+          disabled={loading}
+        >
+          {loading ? 'Traitement en cours...' : ActionType}
+        </Button>
       </DialogContent>
     </Dialog>
   );

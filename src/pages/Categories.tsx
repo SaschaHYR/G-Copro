@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { useAuth } from '@/components/AuthProvider';
 interface Category {
   id: string;
   name: string;
+  created_at: string;
 }
 
 const Categories = () => {
@@ -26,7 +27,7 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const fetchCategories = async () => {
@@ -55,7 +56,7 @@ const Categories = () => {
   }, []);
 
   const canManageCategories = user?.role === 'Superadmin' || user?.role === 'ASL';
-  const isSuperadmin = user?.role === 'Superadmin'; // New check for Superadmin
+  const isSuperadmin = user?.role === 'Superadmin';
 
   const handleAddCategory = async () => {
     if (!canManageCategories) {
@@ -66,7 +67,7 @@ const Categories = () => {
       });
       return;
     }
-    if (!newCategoryName.trim()) {
+    if (!newCategory.trim()) {
       toast({
         title: "Champ requis",
         description: "Le nom de la catégorie ne peut pas être vide.",
@@ -78,7 +79,7 @@ const Categories = () => {
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([{ name: newCategoryName.trim() }]);
+        .insert([{ name: newCategory }]);
 
       if (error) throw error;
 
@@ -88,7 +89,7 @@ const Categories = () => {
       });
 
       setIsAddDialogOpen(false);
-      setNewCategoryName('');
+      setNewCategory('');
       fetchCategories();
     } catch (error: any) {
       toast({
@@ -120,7 +121,7 @@ const Categories = () => {
     try {
       const { error } = await supabase
         .from('categories')
-        .update({ name: editingCategory.name.trim() })
+        .update({ name: editingCategory.name })
         .eq('id', editingCategory.id);
 
       if (error) throw error;
@@ -152,7 +153,7 @@ const Categories = () => {
       return;
     }
 
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ? Cette action est irréversible.")) {
       return;
     }
 
@@ -181,7 +182,7 @@ const Categories = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold text-foreground">Gestion des Catégories</h1>
+        <h1 className="text-3xl font-extrabold text-foreground">Gestion des catégories</h1>
         <div className="flex space-x-2">
           <Link to="/">
             <Button variant="outline" className="rounded-full">
@@ -189,7 +190,7 @@ const Categories = () => {
               Accueil
             </Button>
           </Link>
-          {isSuperadmin && ( // Only show "Retour à l'Admin" for Superadmin
+          {isSuperadmin && (
             <Link to="/admin">
               <Button variant="outline" className="rounded-full">
                 <Home className="mr-2 h-4 w-4" />
@@ -211,11 +212,11 @@ const Categories = () => {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="newCategoryName" className="text-sm font-medium text-foreground">Nom de la catégorie</Label>
+                    <Label htmlFor="name" className="text-sm font-medium text-foreground">Nom</Label>
                     <Input
-                      id="newCategoryName"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      id="name"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
                       required
                       className="rounded-md border-border focus:ring-primary focus:border-primary"
                     />
@@ -240,9 +241,13 @@ const Categories = () => {
         <CardContent>
           {loading ? (
             <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-12 w-12 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -251,13 +256,14 @@ const Categories = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nom</TableHead>
+                  <TableHead>Date de création</TableHead>
                   {canManageCategories && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {categories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={canManageCategories ? 2 : 1} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={canManageCategories ? 3 : 2} className="text-center py-8 text-muted-foreground">
                       Aucune catégorie trouvée.
                     </TableCell>
                   </TableRow>
@@ -265,6 +271,7 @@ const Categories = () => {
                   categories.map((category) => (
                     <TableRow key={category.id}>
                       <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell>{new Date(category.created_at).toLocaleDateString()}</TableCell>
                       {canManageCategories && (
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
@@ -305,9 +312,9 @@ const Categories = () => {
           {editingCategory && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="editCategoryName" className="text-sm font-medium text-foreground">Nom de la catégorie</Label>
+                <Label htmlFor="edit_name" className="text-sm font-medium text-foreground">Nom</Label>
                 <Input
-                  id="editCategoryName"
+                  id="edit_name"
                   value={editingCategory.name}
                   onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
                   required

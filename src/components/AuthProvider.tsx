@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +26,6 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);

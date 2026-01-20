@@ -220,6 +220,12 @@ const Coproprietes = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-foreground">Gestion des copropriétés</h1>
         <div className="flex space-x-2">
+          <Link to="/">
+            <Button variant="outline" className="rounded-full">
+              <Home className="mr-2 h-4 w-4" />
+              Accueil
+            </Button>
+          </Link>
           <Link to="/admin">
             <Button variant="outline" className="rounded-full">
               <Home className="mr-2 h-4 w-4" />

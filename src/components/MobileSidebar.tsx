@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 interface Copropriete {
   id: string;
   nom: string;
+  description: string | null; // Added description
 }
 
 const MobileSidebar = () => {
@@ -38,7 +39,7 @@ const MobileSidebar = () => {
         setLoadingCoproprietes(true);
         const { data, error } = await supabase
           .from('coproprietes')
-          .select('id, nom')
+          .select('id, nom, description') // Fetch description
           .order('nom', { ascending: true });
 
         if (error) throw error;
@@ -170,7 +171,7 @@ const MobileSidebar = () => {
                   <SelectItem value="all">Toutes</SelectItem>
                   {coproprietes.map((copro) => (
                     <SelectItem key={copro.id} value={copro.id}>
-                      {copro.nom}
+                      {copro.nom} {copro.description ? `(${copro.description})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

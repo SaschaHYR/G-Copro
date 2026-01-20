@@ -22,7 +22,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [coproprietes, setCoproprietes] = useState<{ id: string; nom: string }[]>([]);
+  const [coproprietes, setCoproprietes] = useState<{ id: string; nom: string; description: string | null }[]>([]);
   const [loadingCoproprietes, setLoadingCoproprietes] = useState(true);
 
   const fetchUsers = async () => {
@@ -63,7 +63,7 @@ const Admin = () => {
       setLoadingCoproprietes(true);
       const { data, error } = await supabase
         .from('coproprietes')
-        .select('id, nom')
+        .select('id, nom, description') // Fetch description
         .order('nom', { ascending: true });
 
       if (error) throw error;
@@ -249,7 +249,7 @@ const Admin = () => {
                     <SelectItem value="none">Aucune</SelectItem>
                     {coproprietes.map((copro) => (
                       <SelectItem key={copro.id} value={copro.nom}>
-                        {copro.nom}
+                        {copro.nom} {copro.description ? `(${copro.description})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

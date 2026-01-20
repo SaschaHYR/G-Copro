@@ -43,12 +43,12 @@ const NewTicketModal = () => {
 
   // Fetch coproprietes dynamically
   const { data: coproprietes, isLoading: isLoadingCoproprietes, error: coproprietesError } = useQuery<
-    { id: string; nom: string }[],
+    { id: string; nom: string; description: string | null }[], // Fetch description
     Error
   >({
     queryKey: ['coproprietes_list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('coproprietes').select('id, nom').order('nom', { ascending: true });
+      const { data, error } = await supabase.from('coproprietes').select('id, nom, description').order('nom', { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -352,7 +352,7 @@ return (
                   ) : (
                     coproprietes?.map((c) => (
                       <SelectItem key={c.id} value={c.nom}>
-                        {c.nom}
+                        {c.nom} {c.description ? `(${c.description})` : ''}
                       </SelectItem>
                     ))
                   )}

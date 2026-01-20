@@ -11,7 +11,7 @@ import { useToast } from './ui/use-toast';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Ticket, UserRole } from '@/types';
-import { useQueryClient, useQuery } from '@tanstack/react-query'; // Import useQuery
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 const NewTicketModal = () => {
   const [open, setOpen] = useState(false);
@@ -45,7 +45,7 @@ const NewTicketModal = () => {
     { id: string; nom: string }[],
     Error
   >({
-    queryKey: ['coproprietes_list'], // Use a distinct key for coproprietes
+    queryKey: ['coproprietes_list'],
     queryFn: async () => {
       const { data, error } = await supabase.from('coproprietes').select('id, nom').order('nom', { ascending: true });
       if (error) throw error;
@@ -71,6 +71,23 @@ const NewTicketModal = () => {
     }
   }, [categoriesError, coproprietesError, toast]);
 
+  // Reset form when opening modal
+  useEffect(() => {
+    if (open) {
+      setTitre('');
+      setDescription('');
+      setCategorie('');
+      setCopro('');
+      setPriorite('');
+      setPiecesJointes([]);
+      setDestinataire('');
+
+      // For ASL users, set default values
+      if (user?.role === 'ASL') {
+        setDestinataire('ASL');
+      }
+    }
+  }, [open, user?.role]);
 
   const generateUniqueTicketId = () => {
     const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
@@ -90,14 +107,23 @@ const NewTicketModal = () => {
       return;
     }
 
+    // For ASL users, automatically set copro and destinataire
+    let ticketCopro = copro;
+    let ticketDestinataire = destinataire as UserRole;
+
+    if (user.role === 'ASL') {
+      ticketCopro = ''; // ASL doesn't need to select a copro
+      ticketDestinataire = 'ASL'; // ASL is always the destinataire
+    }
+
     const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
       ticket_id_unique: generateUniqueTicketId(),
       titre,
       description,
       categorie,
-      copro,
+      copro: ticketCopro,
       createur_id: user.id,
-      destinataire_role: destinataire as UserRole,
+      destinataire_role: ticketDestinataire,
       status: 'ouvert',
       priorite,
       pieces_jointes: piecesJointes.map(file => file.name), // Store file names for now
@@ -121,6 +147,9 @@ const NewTicketModal = () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
     }
   };
+
+  // Check if user is ASL
+  const isASL = user?.role === 'ASL';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -171,25 +200,30 @@ const NewTicketModal = () => {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
-            <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
-              <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                <SelectValue placeholder="Sélectionner une copropriété" />
-              </SelectTrigger>
-              <SelectContent className="rounded-md">
-                {isLoadingCoproprietes ? (
-                  <SelectItem value="loading" disabled>Chargement...</SelectItem>
-                ) : (
-                  coproprietes?.map((c) => (
-                    <SelectItem key={c.id} value={c.nom}>
-                      {c.nom}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+
+          {/* Only show copro selection if user is not ASL */}
+          {!isASL && (
+            <div>
+              <Label htmlFor="copro" className="text-sm font-medium text-foreground">Copropriété</Label>
+              <Select onValueChange={setCopro} value={copro} required disabled={isLoadingCoproprietes}>
+                <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                  <SelectValue placeholder="Sélectionner une copropriété" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {isLoadingCoproprietes ? (
+                    <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                  ) : (
+                    coproprietes?.map((c) => (
+                      <SelectItem key={c.id} value={c.nom}>
+                        {c.nom}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="priorite" className="text-sm font-medium text-foreground">Priorité</Label>
             <Select onValueChange={setPriorite} value={priorite} required>
@@ -204,33 +238,38 @@ const NewTicketModal = () => {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="destinataire" className="text-sm font-medium text-foreground">Destinataire</Label>
-            <Select onValueChange={(value: UserRole) => setDestinataire(value)} value={destinataire} required>
-              <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
-                <SelectValue placeholder="Sélectionner un destinataire" />
-              </SelectTrigger>
-              <SelectContent className="rounded-md">
-                {user?.role === 'Proprietaire' && (
-                  <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
-                )}
-                {user?.role === 'Conseil_Syndical' && (
-                  <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
-                )}
-                {user?.role === 'Syndicat_Copropriete' && (
-                  <SelectItem value="ASL">ASL</SelectItem>
-                )}
-                {(user?.role === 'ASL' || user?.role === 'Superadmin') && (
-                  <>
-                    <SelectItem value="Proprietaire">Propriétaire</SelectItem>
+
+          {/* Only show destinataire selection if user is not ASL */}
+          {!isASL && (
+            <div>
+              <Label htmlFor="destinataire" className="text-sm font-medium text-foreground">Destinataire</Label>
+              <Select onValueChange={(value: UserRole) => setDestinataire(value)} value={destinataire} required>
+                <SelectTrigger className="rounded-md border-border bg-background text-foreground focus:ring-primary focus:border-primary">
+                  <SelectValue placeholder="Sélectionner un destinataire" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {user?.role === 'Proprietaire' && (
                     <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                  )}
+                  {user?.role === 'Conseil_Syndical' && (
                     <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                  )}
+                  {user?.role === 'Syndicat_Copropriete' && (
                     <SelectItem value="ASL">ASL</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+                  )}
+                  {(user?.role === 'ASL' || user?.role === 'Superadmin') && (
+                    <>
+                      <SelectItem value="Proprietaire">Propriétaire</SelectItem>
+                      <SelectItem value="Conseil_Syndical">Conseil Syndical</SelectItem>
+                      <SelectItem value="Syndicat_Copropriete">Syndicat de Copropriété</SelectItem>
+                      <SelectItem value="ASL">ASL</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="piecesJointes" className="text-sm font-medium text-foreground">Pièces jointes</Label>
             <Input

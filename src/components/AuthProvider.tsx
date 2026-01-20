@@ -178,13 +178,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(null);
         setDegradedMode(false);
       }
-      // IMPORTANT: Do NOT set setLoading(false) here. This listener handles *changes* after initial load.
-      // The initial load's setLoading(false) is handled by the initial check.
     };
 
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication...');
-      // setLoading(true) is already set by useState initial value.
+      setLoading(true); 
       setError(null);
 
       try {
@@ -195,9 +193,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
 
-        if (userError) {
-          console.error('[AuthProvider] Supabase getUser error during init:', userError);
-          throw userError;
+        // Handle AuthSessionMissingError gracefully: it means no session, not a critical error.
+        if (userError && userError.name !== 'AuthSessionMissingError') {
+          console.error('[AuthProvider] Supabase getUser critical error during init:', userError);
+          throw userError; // Re-throw only critical errors
         }
 
         if (supabaseUser) {
@@ -220,11 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          console.log('[AuthProvider] No active user found during init.');
+          // This branch is taken if supabaseUser is null (either no session or AuthSessionMissingError)
+          console.log('[AuthProvider] No active user found during init or session missing.');
           if (isMounted) {
             setUser(null);
-            setError(null);
-            setDegradedMode(false);
+            setError(null); // Clear any previous errors
+            setDegradedMode(false); // Ensure not in degraded mode for missing session
           }
         }
       } catch (err: any) {

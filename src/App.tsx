@@ -15,6 +15,7 @@ import AdminRoute from "./components/AdminRoute";
 import Coproprietes from "./pages/Coproprietes";
 import Categories from "./pages/Categories";
 import ASLAndSuperadminRoute from "./components/ASLAndSuperadminRoute";
+import Gestion from "./pages/Gestion";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+            <Route path="/gestion" element={<ASLAndSuperadminRoute><Gestion /></ASLAndSuperadminRoute>} />
             <Route path="/coproprietes" element={<ASLAndSuperadminRoute><Coproprietes /></ASLAndSuperadminRoute>} />
             <Route path="/categories" element={<ASLAndSuperadminRoute><Categories /></ASLAndSuperadminRoute>} />
             <Route path="*" element={<NotFound />} />

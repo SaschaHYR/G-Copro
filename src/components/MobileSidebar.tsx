@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
-import { Menu, User, Building, ListChecks, Filter, Home } from 'lucide-react';
+import { Menu, User, ListChecks, Filter, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 interface Copropriete {
   id: string;
   nom: string;
-  description: string | null; // Added description
+  description: string | null;
 }
 
 const MobileSidebar = () => {
@@ -39,7 +39,7 @@ const MobileSidebar = () => {
         setLoadingCoproprietes(true);
         const { data, error } = await supabase
           .from('coproprietes')
-          .select('id, nom, description') // Fetch description
+          .select('id, nom, description')
           .order('nom', { ascending: true });
 
         if (error) throw error;
@@ -97,43 +97,17 @@ const MobileSidebar = () => {
             </Button>
 
             {canManage && (
-              <>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start rounded-full"
-                  onClick={() => {
-                    navigate('/coproprietes');
-                    setOpen(false);
-                  }}
-                >
-                  <Building className="mr-2 h-4 w-4" />
-                  <span className="truncate">Gérer les copropriétés</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start rounded-full"
-                  onClick={() => {
-                    navigate('/categories');
-                    setOpen(false);
-                  }}
-                >
-                  <ListChecks className="mr-2 h-4 w-4" />
-                  <span className="truncate">Gérer les catégories</span>
-                </Button>
-                {user?.role === 'Superadmin' && (
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start rounded-full"
-                    onClick={() => {
-                      navigate('/admin');
-                      setOpen(false);
-                    }}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    <span className="truncate">Panneau d'administration</span>
-                  </Button>
-                )}
-              </>
+              <Button
+                variant="outline"
+                className="w-full justify-start rounded-full"
+                onClick={() => {
+                  navigate('/gestion');
+                  setOpen(false);
+                }}
+              >
+                <ListChecks className="mr-2 h-4 w-4" />
+                <span className="truncate">Gestion</span>
+              </Button>
             )}
           </div>
 

@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useTicketFilters } from '@/contexts/TicketFilterContext';
 import { Button } from './ui/button';
-import { User, Building, ListChecks, Home } from 'lucide-react';
+import { User, ListChecks, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { useState, useEffect } from 'react';
@@ -14,7 +14,7 @@ import { useToast } from './ui/use-toast';
 interface Copropriete {
   id: string;
   nom: string;
-  description: string | null; // Added description
+  description: string | null;
 }
 
 const Sidebar = () => {
@@ -32,7 +32,7 @@ const Sidebar = () => {
         setLoadingCoproprietes(true);
         const { data, error } = await supabase
           .from('coproprietes')
-          .select('id, nom, description') // Fetch description
+          .select('id, nom, description')
           .order('nom', { ascending: true });
 
         if (error) throw error;
@@ -78,24 +78,14 @@ const Sidebar = () => {
         </Button>
 
         {canManage && (
-          <>
-            <Button
-              variant="outline"
-              className="w-full justify-start rounded-full"
-              onClick={() => navigate('/coproprietes')}
-            >
-              <Building className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base truncate">Gérer les copropriétés</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start rounded-full"
-              onClick={() => navigate('/categories')}
-            >
-              <ListChecks className="mr-2 h-4 w-4" />
-              <span className="text-sm md:text-base truncate">Gérer les catégories</span>
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            className="w-full justify-start rounded-full"
+            onClick={() => navigate('/gestion')}
+          >
+            <ListChecks className="mr-2 h-4 w-4" />
+            <span className="text-sm md:text-base truncate">Gestion</span>
+          </Button>
         )}
       </CardContent>
 

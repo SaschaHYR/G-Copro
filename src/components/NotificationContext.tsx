@@ -9,6 +9,7 @@ interface NotificationContextType {
   markTicketAsRead: (ticketId: string) => void;
   hasNewActions: (ticketId: string) => boolean;
   resetNotifications: () => void;
+  ticketsWithNewActions: string[];
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -16,6 +17,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [readTickets, setReadTickets] = useState<Set<string>>(new Set());
+  const [ticketsWithNewActions, setTicketsWithNewActions] = useState<string[]>([]);
   const { user } = useAuth();
 
   // Load read tickets from localStorage
@@ -41,15 +43,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       newSet.add(ticketId);
       return newSet;
     });
-    setNotificationCount(prev => Math.max(0, prev - 1));
+    // Remove from tickets with new actions
+    setTicketsWithNewActions(prev => prev.filter(id => id !== ticketId));
   };
 
   const hasNewActions = (ticketId: string) => {
-    return !readTickets.has(ticketId);
+    return ticketsWithNewActions.includes(ticketId);
   };
 
   const resetNotifications = () => {
     setReadTickets(new Set());
+    setTicketsWithNewActions([]);
     setNotificationCount(0);
   };
 
@@ -69,10 +73,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         (payload) => {
           // Type guard for payload
           if (payload.new && typeof payload.new === 'object' && 'createur_id' in payload.new) {
-            const newTicket = payload.new as { createur_id: string };
+            const newTicket = payload.new as { id: string; createur_id: string; date_update: string };
+
             // Only count updates from other users
             if (newTicket.createur_id !== user.id) {
-              setNotificationCount(prev => prev + 1);
+              // Add to tickets with new actions if not already there
+              setTicketsWithNewActions(prev => {
+                if (!prev.includes(newTicket.id)) {
+                  return [...prev, newTicket.id];
+                }
+                return prev;
+              });
             }
           }
         }
@@ -84,13 +95,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [user]);
 
+  // Update notification count when ticketsWithNewActions changes
+  useEffect(() => {
+    setNotificationCount(ticketsWithNewActions.length);
+  }, [ticketsWithNewActions]);
+
   return (
     <NotificationContext.Provider
       value={{
         notificationCount,
         markTicketAsRead,
         hasNewActions,
-        resetNotifications
+        resetNotifications,
+        ticketsWithNewActions
       }}
     >
       {children}

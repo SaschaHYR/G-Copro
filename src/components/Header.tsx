@@ -5,10 +5,12 @@ import { useAuth } from './AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Shield, Bell } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { useNotifications } from './NotificationContext';
 
 const Header = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const { notificationCount, resetNotifications } = useNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -18,10 +20,9 @@ const Header = () => {
   const handleNotificationClick = () => {
     // Filter tickets with new actions from others
     navigate('/?filter=new-actions');
+    // Reset notifications when clicking the bell
+    resetNotifications();
   };
-
-  // This would come from your state management or context
-  const notificationCount = 3; // Replace with actual notification count from your state
 
   return (
     <header className="flex items-center justify-between p-4 bg-card border-b border-border rounded-b-lg shadow-sm">

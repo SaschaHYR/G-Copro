@@ -476,11 +476,13 @@ const Gestion = () => {
                   <Table className="min-w-full">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[30%]">Nom</TableHead>
+                        <TableHead className="w-[20%]">Nom</TableHead>
                         <TableHead className="w-[20%]">Ville</TableHead>
-                        <TableHead className="w-[20%]">Code Postal</TableHead>
-                        <TableHead className="w-[15%]">Statut</TableHead>
-                        <TableHead className="w-[15%] text-center">Actions</TableHead>
+                        <TableHead className="w-[15%]">Code Postal</TableHead>
+                        <TableHead className="w-[20%]">Description</TableHead>
+                        <TableHead className="w-[15%]">Syndic</TableHead>
+                        <TableHead className="w-[10%]">Statut</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -489,6 +491,12 @@ const Gestion = () => {
                           <TableCell className="font-medium">{copropriete.nom}</TableCell>
                           <TableCell>{copropriete.ville || '-'}</TableCell>
                           <TableCell>{copropriete.code_postal || '-'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {copropriete.description || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {copropriete.syndic_nom || '-'}
+                          </TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               copropriete.actif

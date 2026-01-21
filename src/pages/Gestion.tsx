@@ -472,99 +472,117 @@ const Gestion = () => {
 
       {/* Catégories Tab */}
       {activeTab === 'categories' && (
-        <Card className="rounded-lg shadow-lg">
-          <CardHeader className="flex justify-between items-center">
-            <CardTitle className="text-xl font-bold md:text-2xl">Gestion des catégories</CardTitle>
-            {canManageCoproprietes && (
-              <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    <span className="text-sm">Ajouter une catégorie</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] rounded-lg">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold text-primary">Nouvelle Catégorie</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category-name">Nom de la catégorie</Label>
-                      <Input
-                        id="category-name"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        placeholder="Entrez le nom de la catégorie"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleAddCategory}
-                      className="w-full rounded-full"
-                    >
-                      Ajouter Catégorie
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </CardHeader>
-          <CardContent>
-            {loadingCategories ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+        <div className="flex flex-col gap-4">
+          <Card className="rounded-lg shadow-lg">
+            <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <CardTitle className="text-xl font-bold md:text-2xl">Gestion des catégories</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Gérez les catégories utilisées pour classer vos tickets
+                </p>
               </div>
-            ) : categories.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Aucune catégorie trouvée. Cliquez sur "Ajouter une catégorie" pour en créer une nouvelle.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Date de création</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        {new Date(category.created_at).toLocaleDateString('fr-FR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </TableCell>
-                      <TableCell className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingCategory(category);
-                            setIsEditCategoryDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteCategory(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+              {canManageCoproprietes && (
+                <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <span className="text-sm">Ajouter une catégorie</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] rounded-lg">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold text-primary">Nouvelle Catégorie</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="category-name">Nom de la catégorie</Label>
+                        <Input
+                          id="category-name"
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          placeholder="Entrez le nom de la catégorie"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleAddCategory}
+                        className="w-full rounded-full"
+                      >
+                        Ajouter Catégorie
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loadingCategories ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="bg-gray-50 rounded-lg p-6 mb-4">
+                    <ListChecks className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-muted-foreground">
+                      Aucune catégorie trouvée. Cliquez sur "Ajouter une catégorie" pour en créer une nouvelle.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60%]">Nom</TableHead>
+                        <TableHead className="w-[30%]">Date de création</TableHead>
+                        <TableHead className="w-[10%] text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categories.map((category) => (
+                        <TableRow key={category.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="font-medium">{category.name}</TableCell>
+                          <TableCell>
+                            {new Date(category.created_at).toLocaleDateString('fr-FR', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setEditingCategory(category);
+                                  setIsEditCategoryDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteCategory(category.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

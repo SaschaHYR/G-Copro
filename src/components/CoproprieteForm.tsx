@@ -35,7 +35,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="space-y-4 pr-2">
+    <div className="space-y-4 pr-4">
       <div>
         <Label htmlFor="nom" className="text-sm font-medium text-foreground">Nom</Label>
         <Input

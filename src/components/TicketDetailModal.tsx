@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
+import { useNotifications } from './NotificationContext';
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -23,6 +24,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const [comments, setComments] = useState<Commentaire[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const { toast } = useToast();
+  const { markTicketAsRead, hasNewActions } = useNotifications();
 
   // Directly use the joined user data from the ticket prop
   const creatorName = ticket.createur ? `${ticket.createur.first_name || ''} ${ticket.createur.last_name || ''}`.trim() : 'Inconnu';
@@ -53,8 +55,10 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   useEffect(() => {
     if (open) {
       fetchComments();
+      // Mark ticket as read when opened
+      markTicketAsRead(ticket.id);
     }
-  }, [open, ticket.id]);
+  }, [open, ticket.id, markTicketAsRead]);
 
   const handleClose = () => {
     toast({
@@ -88,6 +92,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-full px-2 py-1 text-xs md:px-3 md:py-1 md:text-sm">
+          {hasNewActions(ticket.id) && (
+            <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0" variant="destructive">
+              !
+            </Badge>
+          )}
           Voir
         </Button>
       </DialogTrigger>

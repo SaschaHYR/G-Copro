@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 15000); // 15 seconds timeout
 
     try {
+      console.log(`[AuthProvider] Starting Supabase query for user_informations for ID: ${userId}`);
       const { data, error } = await supabase
         .from('user_informations')
         .select('id, username, role, copro, first_name, last_name, actif') // Explicitly select columns
@@ -46,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId); // Clear timeout if request completes
 
       if (error) {
-        console.error('[AuthProvider] User data fetch error:', error);
+        console.error('[AuthProvider] Supabase user data query error:', error);
         return null;
       }
 
@@ -55,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      console.log('[AuthProvider] User data fetched successfully:', data[0]);
+      console.log('[AuthProvider] User data fetched successfully from Supabase:', data[0]);
       return data[0] as User; // Return the first item
     } catch (err: any) {
       clearTimeout(timeoutId); // Ensure timeout is cleared on error too
@@ -163,15 +164,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('[AuthProvider] Setting up auth listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[AuthProvider] Auth state changed: ${event}`, session?.user?.id);
+      console.log(`[AuthProvider] Auth state changed: ${event}`, session?.user?.id ? `User ID: ${session.user.id}` : 'No user');
 
-      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) { // Added USER_UPDATED event
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') && session?.user) {
+        console.log(`[AuthProvider] Handling ${event} event for user ID: ${session.user.id}`);
         const userData = await fetchUserData(session.user.id);
         if (userData) {
           setUser(userData);
-          console.log('[AuthProvider] User signed in/updated and data loaded:', userData);
+          console.log('[AuthProvider] User data loaded after auth event:', userData);
         } else {
-          console.warn('[AuthProvider] User signed in/updated but no data found');
+          console.warn('[AuthProvider] User signed in/updated/initial session but no data found');
           setUser(null);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -180,30 +182,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('[AuthProvider] Token refreshed');
       }
+      setLoading(false); // Ensure loading is set to false after any auth state change
     });
 
-    // Check initial session
-    const checkInitialSession = async () => {
+    // Check initial session directly on mount
+    const checkInitialSessionDirectly = async () => {
+      console.log('[AuthProvider] Checking initial session directly...');
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[AuthProvider] Error getting initial session:', error);
+          setUser(null);
+        } else if (session?.user) {
+          console.log('[AuthProvider] Initial session found directly, user ID:', session.user.id);
           const userData = await fetchUserData(session.user.id);
           if (userData) {
             setUser(userData);
-            console.log('[AuthProvider] Initial session found, user data loaded:', userData);
+            console.log('[AuthProvider] Initial session user data loaded:', userData);
           } else {
-            console.warn('[AuthProvider] Initial session found but no user data');
+            console.warn('[AuthProvider] Initial session found directly but no user data');
             setUser(null);
           }
+        } else {
+          console.log('[AuthProvider] No initial session found directly.');
+          setUser(null);
         }
       } catch (error) {
-        console.error('[AuthProvider] Error checking initial session:', error);
+        console.error('[AuthProvider] Error in checkInitialSessionDirectly:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
-    checkInitialSession();
+    checkInitialSessionDirectly();
 
     return () => {
       console.log('[AuthProvider] Cleaning up auth listener');
@@ -217,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     signUp,
-    refreshUserProfile, // Expose the new function
+    refreshUserProfile,
   };
 
   return (

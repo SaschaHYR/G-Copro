@@ -31,77 +31,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log(`[AuthProvider] Starting fetchUserData for ID: ${userId}`);
 
     try {
-      console.log(`[AuthProvider] About to query user_informations table for ID: ${userId}`);
-
-      // Augmentation du timeout à 15 secondes pour les requêtes lentes
+      // Approche directe avec timeout court pour éviter les blocages
       const timeoutPromise = new Promise<null>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('[AuthProvider] Timeout: Query took too long (15 seconds)'));
-        }, 15000); // 15 secondes au lieu de 5
+          reject(new Error('[AuthProvider] Direct query timeout after 3 seconds'));
+        }, 3000);
       });
 
-      const queryPromise = supabase
-        .from('user_informations')
-        .select('*')
-        .eq('id', userId)
-        .limit(1);
+      try {
+        const queryPromise = supabase
+          .from('user_informations')
+          .select('*')
+          .eq('id', userId)
+          .limit(1);
 
-      const result = await Promise.race([queryPromise, timeoutPromise]);
+        const result = await Promise.race([queryPromise, timeoutPromise]);
 
-      if (result instanceof Error) {
-        throw result;
-      }
-
-      // Correction des erreurs TypeScript
-      const response = result as { data: any[], error: any | null };
-      const { data, error } = response;
-
-      console.log(`[AuthProvider] Query completed for ID: ${userId}`);
-      console.log(`[AuthProvider] Query result data:`, data);
-      console.log(`[AuthProvider] Query result error:`, error);
-
-      if (error) {
-        console.error('[AuthProvider] Error fetching user data:', error);
-        return null;
-      }
-
-      if (!data || data.length === 0) {
-        console.warn('[AuthProvider] No user data found for ID:', userId);
-        return null;
-      }
-
-      const userData = data[0] as User;
-      console.log('[AuthProvider] User data fetched successfully:', userData);
-      return userData;
-    } catch (err: any) {
-      console.error('[AuthProvider] Error in fetchUserData:', err.message);
-      console.error('[AuthProvider] Full error object:', err);
-
-      // En cas de timeout, on essaie une approche alternative
-      if (err.message.includes('Timeout')) {
-        console.log('[AuthProvider] Timeout occurred, trying alternative approach');
-
-        // Approche alternative : utiliser RPC si disponible
-        try {
-          console.log('[AuthProvider] Trying RPC approach for user data');
-          const { data, error } = await supabase
-            .rpc('get_user_data', { user_id: userId })
-            .single();
-
-          if (error) {
-            console.error('[AuthProvider] RPC error:', error);
-            return null;
-          }
-
-          if (data) {
-            console.log('[AuthProvider] User data fetched via RPC:', data);
-            return data as User;
-          }
-        } catch (rpcError: any) {
-          console.error('[AuthProvider] RPC failed:', rpcError.message);
+        if (result instanceof Error) {
+          throw result;
         }
+
+        const response = result as { data: any[], error: any | null };
+        const { data, error } = response;
+
+        if (error) {
+          console.error('[AuthProvider] Direct query error:', error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          const userData = data[0] as User;
+          console.log('[AuthProvider] User data fetched via direct query:', userData);
+          return userData;
+        }
+      } catch (directError: any) {
+        console.warn('[AuthProvider] Direct query failed, trying RPC:', directError.message);
       }
 
+      // Approche RPC avec timeout court
+      try {
+        const rpcTimeoutPromise = new Promise<null>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('[AuthProvider] RPC timeout after 3 seconds'));
+          }, 3000);
+        });
+
+        const rpcPromise = supabase
+          .rpc('get_user_data', { user_id: userId })
+          .single();
+
+        const rpcResult = await Promise.race([rpcPromise, rpcTimeoutPromise]);
+
+        if (rpcResult instanceof Error) {
+          throw rpcResult;
+        }
+
+        // Correction des erreurs TypeScript
+        const rpcResponse = rpcResult as { data: any, error: any | null };
+        const { data: rpcData, error: rpcError } = rpcResponse;
+
+        if (rpcError) {
+          console.error('[AuthProvider] RPC error:', rpcError);
+          throw rpcError;
+        }
+
+        if (rpcData) {
+          console.log('[AuthProvider] User data fetched via RPC:', rpcData);
+          return rpcData as User;
+        }
+      } catch (rpcError: any) {
+        console.warn('[AuthProvider] RPC failed:', rpcError.message);
+      }
+
+      // Si tout échoue, créer un utilisateur minimal à partir des données d'authentification
+      console.log('[AuthProvider] All queries failed, creating minimal user data');
+      return {
+        id: userId,
+        username: `user_${userId.substring(0, 8)}@example.com`, // Email générique
+        role: 'En attente', // Rôle par défaut
+        copro: null,
+        actif: true,
+        first_name: 'Utilisateur',
+        last_name: 'Inconnu'
+      } as User;
+
+    } catch (err: any) {
+      console.error('[AuthProvider] Critical error in fetchUserData:', err.message);
       return null;
     }
   }, []);
@@ -186,7 +201,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error: any) {
       console.error('[AuthProvider] Error refreshing user profile:', error.message);
-      console.error('[AuthProvider] Full error in refreshUserProfile:', error);
       setUser(null);
     } finally {
       console.log('[AuthProvider] refreshUserProfile completed, setting loading to false');
@@ -225,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
     authSubscription = subscription;
 
-    // Vérification de la session initiale directement pour éviter les délais
+    // Vérification de la session initiale
     const checkInitialSession = async () => {
       setLoading(true);
       try {

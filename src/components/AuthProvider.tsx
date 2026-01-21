@@ -31,7 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
 
-    // Vérifier le cache en premier
     if (userCache[userId]) {
       console.log(`[AuthProvider] User data found in cache for ID: ${userId}`);
       return userCache[userId];
@@ -40,7 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[AuthProvider] Starting direct query to user_informations for ID: ${userId}`);
 
-      // Utilisation d'une requête directe avec un filtre explicite
       const { data, error } = await supabase
         .from('user_informations')
         .select('*')
@@ -60,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userData = data[0] as User;
       console.log('[AuthProvider] User data fetched successfully via direct query:', userData);
 
-      // Mettre à jour le cache
       setUserCache(prevCache => ({ ...prevCache, [userId]: userData }));
 
       return userData;
@@ -94,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
-      setUserCache({}); // Vider le cache à la déconnexion
+      setUserCache({});
       console.log('[AuthProvider] Logout successful');
     } catch (error: any) {
       console.error('[AuthProvider] Logout error:', error.message);
@@ -153,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let currentRealtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let authSubscription: { unsubscribe: () => void } | null = null;
 
     const handleAuthStateChange = async (event: string, session: any | null) => {
       console.log(`[AuthProvider] Auth state changed: ${event}`, session?.user?.id ? `User ID: ${session.user.id}` : 'No user');
@@ -162,7 +160,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await fetchUserData(session.user.id);
         if (userData) {
           setUser(userData);
-          // Gérer l'abonnement en temps réel ici
           if (currentRealtimeChannel) {
             console.log(`[AuthProvider] Unsubscribing existing realtime channel for user ID: ${session.user.id}`);
             supabase.removeChannel(currentRealtimeChannel);
@@ -198,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currentRealtimeChannel = null;
         }
         setUser(null);
-        setUserCache({}); // Vider le cache à la déconnexion
+        setUserCache({});
         console.log('[AuthProvider] User signed out');
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('[AuthProvider] Token refreshed');
@@ -208,8 +205,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Abonnement aux changements d'état d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    authSubscription = subscription;
 
-    // Vérification de la session initiale directement pour éviter les délais
     const checkInitialSession = async () => {
       setLoading(true);
       try {
@@ -235,12 +232,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       console.log('[AuthProvider] Cleaning up auth listener and realtime channel on unmount');
-      subscription.unsubscribe();
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
       if (currentRealtimeChannel) {
         supabase.removeChannel(currentRealtimeChannel);
       }
     };
-  }, [fetchUserData, userCache]); // Dépendances pour useEffect
+  }, [fetchUserData, userCache]);
 
   const value = {
     user,

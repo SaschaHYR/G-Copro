@@ -27,7 +27,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userCache, setUserCache] = useState<Record<string, User>>({});
-  // `realtimeSubscription` sera géré localement dans le useEffect pour un meilleur contrôle
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
@@ -38,23 +37,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return userCache[userId];
     }
 
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.warn(`[AuthProvider] fetchUserData for ${userId} timed out after 15 seconds.`);
-      abortController.abort();
-    }, 15000);
-
     try {
-      console.log(`[AuthProvider] Starting RPC call to get_user_data for ID: ${userId}`);
-      // Utilisation de la fonction RPC pour contourner les RLS
+      console.log(`[AuthProvider] Starting direct query to user_informations for ID: ${userId}`);
+
+      // Utilisation d'une requête directe avec un filtre explicite
       const { data, error } = await supabase
-        .rpc('get_user_data', { user_id: userId })
+        .from('user_informations')
+        .select('*')
+        .eq('id', userId)
         .limit(1);
 
-      clearTimeout(timeoutId);
-
       if (error) {
-        console.error('[AuthProvider] RPC get_user_data error:', error);
+        console.error('[AuthProvider] Direct query error:', error);
         return null;
       }
 
@@ -64,19 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const userData = data[0] as User;
-      console.log('[AuthProvider] User data fetched successfully via RPC:', userData);
+      console.log('[AuthProvider] User data fetched successfully via direct query:', userData);
 
       // Mettre à jour le cache
       setUserCache(prevCache => ({ ...prevCache, [userId]: userData }));
 
       return userData;
     } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
-        console.error('[AuthProvider] User data fetch aborted (likely due to timeout).');
-      } else {
-        console.error('[AuthProvider] Error in fetchUserData:', err.message);
-      }
+      console.error('[AuthProvider] Error in fetchUserData:', err.message);
       return null;
     }
   }, [userCache]);
@@ -93,9 +82,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('[AuthProvider] Login error:', error.message);
         throw error;
       }
-
-      // Le listener `onAuthStateChange` gérera la mise à jour de l'utilisateur et l'abonnement en temps réel.
-      // Pas besoin d'appeler `fetchUserData` ou `setupRealtimeSubscription` ici directement.
     } catch (error: any) {
       console.error('[AuthProvider] Login failed:', error.message);
       throw error;

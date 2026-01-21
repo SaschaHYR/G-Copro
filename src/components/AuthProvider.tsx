@@ -27,11 +27,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Récupérer les données utilisateur depuis le stockage local au démarrage
+  useEffect(() => {
+    const cachedUser = localStorage.getItem('cachedUser');
+    if (cachedUser) {
+      try {
+        const parsedUser = JSON.parse(cachedUser);
+        console.log('[AuthProvider] Loaded user from cache:', parsedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('[AuthProvider] Error parsing cached user:', error);
+      }
+    }
+  }, []);
+
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Starting fetchUserData for ID: ${userId}`);
 
     try {
-      // Approche directe avec timeout court pour éviter les blocages
+      // Vérifier d'abord si nous avons des données en cache
+      const cachedUser = localStorage.getItem(`userCache_${userId}`);
+      if (cachedUser) {
+        try {
+          const parsedUser = JSON.parse(cachedUser);
+          console.log('[AuthProvider] Using cached user data:', parsedUser);
+          return parsedUser;
+        } catch (error) {
+          console.error('[AuthProvider] Error parsing cached user data:', error);
+        }
+      }
+
+      // Approche directe avec timeout court
       const timeoutPromise = new Promise<null>((_, reject) => {
         setTimeout(() => {
           reject(new Error('[AuthProvider] Direct query timeout after 3 seconds'));
@@ -62,6 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data && data.length > 0) {
           const userData = data[0] as User;
           console.log('[AuthProvider] User data fetched via direct query:', userData);
+
+          // Mettre en cache les données utilisateur
+          localStorage.setItem(`userCache_${userId}`, JSON.stringify(userData));
+          localStorage.setItem('cachedUser', JSON.stringify(userData));
+
           return userData;
         }
       } catch (directError: any) {
@@ -86,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw rpcResult;
         }
 
-        // Correction des erreurs TypeScript
         const rpcResponse = rpcResult as { data: any, error: any | null };
         const { data: rpcData, error: rpcError } = rpcResponse;
 
@@ -97,23 +127,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (rpcData) {
           console.log('[AuthProvider] User data fetched via RPC:', rpcData);
+
+          // Mettre en cache les données utilisateur
+          localStorage.setItem(`userCache_${userId}`, JSON.stringify(rpcData));
+          localStorage.setItem('cachedUser', JSON.stringify(rpcData));
+
           return rpcData as User;
         }
       } catch (rpcError: any) {
         console.warn('[AuthProvider] RPC failed:', rpcError.message);
       }
 
-      // Si tout échoue, créer un utilisateur minimal à partir des données d'authentification
+      // Si tout échoue, créer un utilisateur minimal
       console.log('[AuthProvider] All queries failed, creating minimal user data');
-      return {
+      const minimalUser = {
         id: userId,
-        username: `user_${userId.substring(0, 8)}@example.com`, // Email générique
-        role: 'En attente', // Rôle par défaut
+        username: `user_${userId.substring(0, 8)}@example.com`,
+        role: 'En attente',
         copro: null,
         actif: true,
         first_name: 'Utilisateur',
         last_name: 'Inconnu'
       } as User;
+
+      // Mettre en cache l'utilisateur minimal
+      localStorage.setItem(`userCache_${userId}`, JSON.stringify(minimalUser));
+      localStorage.setItem('cachedUser', JSON.stringify(minimalUser));
+
+      return minimalUser;
 
     } catch (err: any) {
       console.error('[AuthProvider] Critical error in fetchUserData:', err.message);
@@ -144,6 +185,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+
+      // Effacer le cache lors de la déconnexion
+      localStorage.removeItem('cachedUser');
+      const userId = user?.id;
+      if (userId) {
+        localStorage.removeItem(`userCache_${userId}`);
+      }
+
       setUser(null);
       console.log('[AuthProvider] Logout successful');
     } catch (error: any) {

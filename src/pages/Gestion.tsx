@@ -425,49 +425,68 @@ const Gestion = () => {
 
       {/* Copropriétés Tab */}
       {activeTab === 'coproprietes' && (
-        <>
-          <div className="flex justify-end mb-4">
-            {canManageCoproprietes && (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    <span className="text-sm">Ajouter une copropriété</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouvelle Copropriété</DialogTitle>
-                  </DialogHeader>
-                  <CoproprieteForm
-                    copropriete={newCopropriete}
-                    onChange={handleFieldChange}
-                    onSubmit={handleAddCopropriete}
-                    submitText="Ajouter Copropriété"
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
+        <div className="flex flex-col gap-4">
           <Card className="rounded-lg shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold md:text-2xl">Liste des copropriétés</CardTitle>
+            <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <CardTitle className="text-xl font-bold md:text-2xl">Gestion des copropriétés</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Gérez les copropriétés et leurs informations
+                </p>
+              </div>
+              {canManageCoproprietes && (
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <span className="text-sm">Ajouter une copropriété</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouvelle Copropriété</DialogTitle>
+                    </DialogHeader>
+                    <CoproprieteForm
+                      copropriete={newCopropriete}
+                      onChange={handleFieldChange}
+                      onSubmit={handleAddCopropriete}
+                      submitText="Ajouter Copropriété"
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
             </CardHeader>
             <CardContent>
-              <CoproprieteTable
-                coproprietes={coproprietes}
-                onEdit={(copro) => {
-                  setEditingCopropriete(copro);
-                  setIsEditDialogOpen(true);
-                }}
-                onDelete={handleDeleteCopropriete}
-                canManage={canManageCoproprietes}
-                loading={loading}
-              />
+              {loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : coproprietes.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="bg-gray-50 rounded-lg p-6 mb-4">
+                    <Building className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-muted-foreground">
+                      Aucune copropriété trouvée. Cliquez sur "Ajouter une copropriété" pour en créer une nouvelle.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <CoproprieteTable
+                  coproprietes={coproprietes}
+                  onEdit={(copro) => {
+                    setEditingCopropriete(copro);
+                    setIsEditDialogOpen(true);
+                  }}
+                  onDelete={handleDeleteCopropriete}
+                  canManage={canManageCoproprietes}
+                  loading={loading}
+                />
+              )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       {/* Catégories Tab */}

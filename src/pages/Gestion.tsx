@@ -14,7 +14,6 @@ import { Link } from 'react-router-dom';
 import { Home, PlusCircle, Edit, Trash2, ListChecks, Building } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import CoproprieteForm from '@/components/CoproprieteForm';
-import CoproprieteTable from '@/components/CoproprieteTable';
 
 interface Copropriete {
   id: string;
@@ -473,16 +472,60 @@ const Gestion = () => {
                   </div>
                 </div>
               ) : (
-                <CoproprieteTable
-                  coproprietes={coproprietes}
-                  onEdit={(copro) => {
-                    setEditingCopropriete(copro);
-                    setIsEditDialogOpen(true);
-                  }}
-                  onDelete={handleDeleteCopropriete}
-                  canManage={canManageCoproprietes}
-                  loading={loading}
-                />
+                <div className="overflow-x-auto">
+                  <Table className="min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[30%]">Nom</TableHead>
+                        <TableHead className="w-[20%]">Ville</TableHead>
+                        <TableHead className="w-[20%]">Code Postal</TableHead>
+                        <TableHead className="w-[15%]">Statut</TableHead>
+                        <TableHead className="w-[15%] text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coproprietes.map((copropriete) => (
+                        <TableRow key={copropriete.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="font-medium">{copropriete.nom}</TableCell>
+                          <TableCell>{copropriete.ville || '-'}</TableCell>
+                          <TableCell>{copropriete.code_postal || '-'}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              copropriete.actif
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {copropriete.actif ? 'Active' : 'Inactive'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setEditingCopropriete(copropriete);
+                                  setIsEditDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteCopropriete(copropriete.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

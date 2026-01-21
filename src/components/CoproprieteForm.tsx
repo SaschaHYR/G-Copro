@@ -35,7 +35,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="space-y-4 pr-4">
+    <div className="space-y-4 px-4 py-2">
       <div>
         <Label htmlFor="nom" className="text-sm font-medium text-foreground">Nom</Label>
         <Input
@@ -43,7 +43,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           value={copropriete.nom}
           onChange={(e) => onChange('nom', e.target.value)}
           required
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -52,7 +52,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="adresse"
           value={copropriete.adresse}
           onChange={(e) => onChange('adresse', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -61,7 +61,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="ville"
           value={copropriete.ville}
           onChange={(e) => onChange('ville', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -70,7 +70,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="code_postal"
           value={copropriete.code_postal}
           onChange={(e) => onChange('code_postal', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -79,7 +79,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="description"
           value={copropriete.description}
           onChange={(e) => onChange('description', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -88,7 +88,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="syndic_nom"
           value={copropriete.syndic_nom}
           onChange={(e) => onChange('syndic_nom', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -97,7 +97,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="syndic_responsable_nom"
           value={copropriete.syndic_responsable_nom}
           onChange={(e) => onChange('syndic_responsable_nom', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -106,7 +106,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="syndic_responsable_prenom"
           value={copropriete.syndic_responsable_prenom}
           onChange={(e) => onChange('syndic_responsable_prenom', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -116,7 +116,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           type="email"
           value={copropriete.syndic_email}
           onChange={(e) => onChange('syndic_email', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
       <div>
@@ -125,10 +125,10 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
           id="syndic_telephone"
           value={copropriete.syndic_telephone}
           onChange={(e) => onChange('syndic_telephone', e.target.value)}
-          className="rounded-md border-border focus:ring-primary focus:border-primary"
+          className="rounded-md border-border focus:ring-primary focus:border-primary mt-1"
         />
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 pt-2">
         <Checkbox
           id="actif"
           checked={copropriete.actif}
@@ -140,7 +140,7 @@ const CoproprieteForm: React.FC<CoproprieteFormProps> = ({
       </div>
       <Button
         onClick={onSubmit}
-        className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg"
+        className="w-full rounded-full py-2 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-300 md:text-lg mt-4"
         disabled={isLoading}
       >
         {isLoading ? 'Traitement en cours...' : submitText}

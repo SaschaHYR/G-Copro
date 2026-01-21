@@ -95,16 +95,6 @@ const Sidebar = () => {
               <ListChecks className="mr-2 h-4 w-4" />
               <span className="text-sm md:text-base truncate">Gérer les catégories</span>
             </Button>
-            {user?.role === 'Superadmin' && (
-              <Button
-                variant="outline"
-                className="w-full justify-start rounded-full"
-                onClick={() => navigate('/admin')}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span className="text-sm md:text-base truncate">Panneau d'administration</span>
-              </Button>
-            )}
           </>
         )}
       </CardContent>

@@ -441,16 +441,18 @@ const Gestion = () => {
                       <span className="text-sm">Ajouter une copropriété</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
+                  <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Nouvelle Copropriété</DialogTitle>
                     </DialogHeader>
-                    <CoproprieteForm
-                      copropriete={newCopropriete}
-                      onChange={handleFieldChange}
-                      onSubmit={handleAddCopropriete}
-                      submitText="Ajouter Copropriété"
-                    />
+                    <div className="overflow-y-auto max-h-[70vh] pr-4">
+                      <CoproprieteForm
+                        copropriete={newCopropriete}
+                        onChange={handleFieldChange}
+                        onSubmit={handleAddCopropriete}
+                        submitText="Ajouter Copropriété"
+                      />
+                    </div>
                   </DialogContent>
                 </Dialog>
               )}
@@ -656,18 +658,20 @@ const Gestion = () => {
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px]">
+        <DialogContent className="sm:max-w-[425px] rounded-lg md:max-w-[600px] lg:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-primary md:text-2xl">Modifier la Copropriété</DialogTitle>
           </DialogHeader>
-          {editingCopropriete && (
-            <CoproprieteForm
-              copropriete={editingCopropriete}
-              onChange={handleFieldChange}
-              onSubmit={handleUpdateCopropriete}
-              submitText="Enregistrer les modifications"
-            />
-          )}
+          <div className="overflow-y-auto max-h-[70vh] pr-4">
+            {editingCopropriete && (
+              <CoproprieteForm
+                copropriete={editingCopropriete}
+                onChange={handleFieldChange}
+                onSubmit={handleUpdateCopropriete}
+                submitText="Enregistrer les modifications"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

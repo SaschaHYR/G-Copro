@@ -33,11 +33,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[AuthProvider] About to query user_informations table for ID: ${userId}`);
 
-      // Ajout d'un timeout pour éviter les blocages infinis
+      // Augmentation du timeout à 15 secondes pour les requêtes lentes
       const timeoutPromise = new Promise<null>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('[AuthProvider] Timeout: Query took too long (5 seconds)'));
-        }, 5000);
+          reject(new Error('[AuthProvider] Timeout: Query took too long (15 seconds)'));
+        }, 15000); // 15 secondes au lieu de 5
       });
 
       const queryPromise = supabase
@@ -76,6 +76,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('[AuthProvider] Error in fetchUserData:', err.message);
       console.error('[AuthProvider] Full error object:', err);
+
+      // En cas de timeout, on essaie une approche alternative
+      if (err.message.includes('Timeout')) {
+        console.log('[AuthProvider] Timeout occurred, trying alternative approach');
+
+        // Approche alternative : utiliser RPC si disponible
+        try {
+          console.log('[AuthProvider] Trying RPC approach for user data');
+          const { data, error } = await supabase
+            .rpc('get_user_data', { user_id: userId })
+            .single();
+
+          if (error) {
+            console.error('[AuthProvider] RPC error:', error);
+            return null;
+          }
+
+          if (data) {
+            console.log('[AuthProvider] User data fetched via RPC:', data);
+            return data as User;
+          }
+        } catch (rpcError: any) {
+          console.error('[AuthProvider] RPC failed:', rpcError.message);
+        }
+      }
+
       return null;
     }
   }, []);

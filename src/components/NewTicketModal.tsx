@@ -17,8 +17,8 @@ const NewTicketModal = () => {
   const [open, setOpen] = useState(false);
   const [titre, setTitre] = useState('');
   const [description, setDescription] = useState('');
-  const [categorie, setCategorie] = useState('');
-  const [copro, setCopro] = useState('');
+  const [categorie, setCategorie] = useState(''); // This will now store category ID
+  const [copro, setCopro] = useState(''); // This will now store copro ID
   const [priorite, setPriorite] = useState('');
   const [piecesJointes, setPiecesJointes] = useState<File[]>([]);
   const [destinataire, setDestinataire] = useState<UserRole | ''>('');
@@ -142,7 +142,7 @@ const NewTicketModal = () => {
       return false;
     }
 
-    if (!categorie) {
+    if (!categorie) { // Now checks if category ID is selected
       toast({
         title: "Champ requis",
         description: "La catégorie est obligatoire",
@@ -162,7 +162,7 @@ const NewTicketModal = () => {
 
     // For non-ASL users, check copro and destinataire
     if (user?.role !== 'ASL') {
-      if (!copro) {
+      if (!copro) { // Now checks if copro ID is selected
         toast({
           title: "Champ requis",
           description: "La copropriété est obligatoire",
@@ -206,29 +206,36 @@ const handleSubmit = async (e: React.FormEvent) => {
     // Generate sequential ticket ID
     const ticketIdUnique = await generateSequentialTicketId();
 
-    // Determine copro and destinataire based on user role
-    let ticketCopro = copro;
-    let ticketDestinataire = destinataire as UserRole;
+    let ticketCoproName = '';
+    let ticketCategoryName = '';
 
+    // Find the actual names from the IDs
     if (user.role === 'ASL') {
-      ticketCopro = 'ASL'; // ASL is considered as copro "ASL"
-      ticketDestinataire = 'ASL'; // ASL is always the destinataire
-    } else if (user.role === 'Superadmin') {
-      // Superadmin can select any copro and destinataire
-      ticketCopro = copro;
-      ticketDestinataire = destinataire as UserRole;
+      ticketCoproName = 'ASL'; // ASL is considered as copro "ASL"
     } else {
-      // For other roles, use the user's copro from their profile
-      ticketCopro = user.copro || copro;
-      ticketDestinataire = destinataire as UserRole;
+      const selectedCopro = coproprietes?.find(c => c.id === copro);
+      if (selectedCopro) {
+        ticketCoproName = selectedCopro.nom;
+      } else {
+        throw new Error("Copropriété sélectionnée introuvable.");
+      }
     }
+
+    const selectedCategory = categories?.find(cat => cat.id === categorie);
+    if (selectedCategory) {
+      ticketCategoryName = selectedCategory.name;
+    } else {
+      throw new Error("Catégorie sélectionnée introuvable.");
+    }
+
+    let ticketDestinataire = destinataire as UserRole;
 
     const newTicket: Omit<Ticket, 'id' | 'date_create' | 'date_update' | 'cloture_date' | 'cloture_par'> = {
       ticket_id_unique: ticketIdUnique,
       titre,
       description,
-      categorie,
-      copro: ticketCopro,
+      categorie: ticketCategoryName, // Use the found name
+      copro: ticketCoproName, // Use the found name
       createur_id: user.id,
       destinataire_role: ticketDestinataire,
       status: 'ouvert',
@@ -329,7 +336,7 @@ return (
                   <SelectItem value="loading" disabled>Chargement...</SelectItem>
                 ) : (
                   categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
+                    <SelectItem key={cat.id} value={cat.id}> {/* Changed value to cat.id */}
                       {cat.name}
                     </SelectItem>
                   ))
@@ -351,7 +358,7 @@ return (
                     <SelectItem value="loading" disabled>Chargement...</SelectItem>
                   ) : (
                     coproprietes?.map((c) => (
-                      <SelectItem key={c.id} value={c.nom}>
+                      <SelectItem key={c.id} value={c.id}> {/* Changed value to c.id */}
                         {c.nom} {c.description ? `(${c.description})` : ''}
                       </SelectItem>
                     ))

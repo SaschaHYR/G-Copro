@@ -51,7 +51,11 @@ export const useTickets = () => {
       }
     }
 
-    const { data, error } = await query.order('date_create', { ascending: false });
+    // Add pagination for scalability
+    const pageSize = 50; // Number of tickets per page
+    const { data, error } = await query
+      .order('date_create', { ascending: false })
+      .limit(pageSize);
 
     if (error) {
       throw error;

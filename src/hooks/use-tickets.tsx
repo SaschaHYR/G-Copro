@@ -51,8 +51,8 @@ export const useTickets = () => {
       }
     }
 
-    // Add pagination for scalability
-    const pageSize = 50; // Number of tickets per page
+    // Add pagination for scalability - reduced to 20 tickets per page
+    const pageSize = 20; // Reduced from 50 to 20 tickets per page
     const { data, error } = await query
       .order('date_create', { ascending: false })
       .limit(pageSize);

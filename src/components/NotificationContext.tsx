@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { Ticket, Commentaire } from '@/types'; // Assuming Ticket and Commentaire types are available
+import { Commentaire } from '@/types'; // Only import Commentaire since Ticket is not used
 
 interface NotificationContextType {
   notificationCount: number;
@@ -78,12 +78,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
-      const userTickets: Ticket[] = userTicketsData || []; // Explicitly use Ticket type
-
       let unreadCount = 0;
       const newReadTickets = new Set(readTickets); // Use a mutable copy for this calculation
 
-      for (const ticket of userTickets) {
+      for (const ticket of userTicketsData || []) {
         // Fetch the latest comment for each ticket
         const { data: latestComment, error: commentError } = await supabase
           .from('commentaires')
@@ -137,9 +135,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 return;
               }
 
-              const ticketData: Ticket | null = ticketDataResult; // Explicitly use Ticket type
-
-              if (ticketData && (ticketData.createur_id === user.id || ticketData.destinataire_role === user.role)) {
+              if (ticketDataResult && (ticketDataResult.createur_id === user.id || ticketDataResult.destinataire_role === user.role)) {
                 setNotificationCount(prev => prev + 1);
               }
             }

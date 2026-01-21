@@ -17,11 +17,6 @@ const Header = () => {
     navigate('/login');
   };
 
-  const handleNotificationClick = () => {
-    // Filter tickets with new actions from others
-    navigate('/?filter=new-actions');
-  };
-
   return (
     <header className="flex items-center justify-between p-4 bg-card border-b border-border rounded-b-lg shadow-sm">
       <h1 className="text-2xl font-bold text-primary">G Copro</h1>
@@ -29,9 +24,9 @@ const Header = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleNotificationClick}
           className="rounded-full relative"
           title="Notifications"
+          disabled
         >
           <Bell className="h-5 w-5 text-muted-foreground hover:text-primary" />
           {notificationCount > 0 && (

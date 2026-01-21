@@ -91,11 +91,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
           Voir
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px] rounded-lg max-h-[90vh] overflow-y-auto md:max-w-[900px] lg:max-w-[1000px]">
+      <DialogContent className="sm:max-w-[800px] rounded-lg max-h-[90vh] md:max-w-[900px] lg:max-w-[1000px]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-primary md:text-xl">Détails du Ticket {ticket.ticket_id_unique}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-[calc(90vh-100px)] pr-4">
+        <ScrollArea className="h-[calc(90vh-150px)] pr-4">
           <div className="space-y-4">
             <Card className="rounded-lg shadow-md">
               <CardHeader className="pb-2">

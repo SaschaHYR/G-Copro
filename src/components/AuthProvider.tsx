@@ -10,12 +10,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
-  refreshUserProfile: () => Promise<void>; // Added this function
+  refreshUserProfile: () => Promise<void>;
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-// Custom hook to use the AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -27,39 +26,53 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userCache, setUserCache] = useState<Record<string, User>>({});
+  const [realtimeSubscription, setRealtimeSubscription] = useState<{ unsubscribe: () => void } | null>(null);
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
     console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
+
+    // Check cache first
+    if (userCache[userId]) {
+      console.log(`[AuthProvider] User data found in cache for ID: ${userId}`);
+      return userCache[userId];
+    }
+
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => {
       console.warn(`[AuthProvider] fetchUserData for ${userId} timed out after 15 seconds.`);
       abortController.abort();
-    }, 15000); // 15 seconds timeout
+    }, 15000);
 
     try {
       console.log(`[AuthProvider] Starting Supabase query for user_informations for ID: ${userId}`);
       const { data, error } = await supabase
         .from('user_informations')
-        .select('id, username, role, copro, first_name, last_name, actif') // Explicitly select columns
+        .select('id, username, role, copro, first_name, last_name, actif')
         .eq('id', userId)
-        .limit(1); // Use limit(1) instead of maybeSingle()
+        .limit(1);
 
-      clearTimeout(timeoutId); // Clear timeout if request completes
+      clearTimeout(timeoutId);
 
       if (error) {
         console.error('[AuthProvider] Supabase user data query error:', error);
         return null;
       }
 
-      if (!data || data.length === 0) { // Check for empty array
+      if (!data || data.length === 0) {
         console.warn('[AuthProvider] No user data found for ID:', userId);
         return null;
       }
 
-      console.log('[AuthProvider] User data fetched successfully from Supabase:', data[0]);
-      return data[0] as User; // Return the first item
+      const userData = data[0] as User;
+      console.log('[AuthProvider] User data fetched successfully from Supabase:', userData);
+
+      // Update cache
+      setUserCache(prevCache => ({ ...prevCache, [userId]: userData }));
+
+      return userData;
     } catch (err: any) {
-      clearTimeout(timeoutId); // Ensure timeout is cleared on error too
+      clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
         console.error('[AuthProvider] User data fetch aborted (likely due to timeout).');
       } else {
@@ -67,7 +80,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return null;
     }
-  }, []);
+  }, [userCache]);
+
+  const setupRealtimeSubscription = useCallback((userId: string) => {
+    console.log(`[AuthProvider] Setting up realtime subscription for user ID: ${userId}`);
+
+    // Clean up any existing subscription
+    if (realtimeSubscription) {
+      realtimeSubscription.unsubscribe();
+    }
+
+    const channel = supabase
+      .channel(`user_informations_changes_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_informations',
+          filter: `id=eq.${userId}`
+        },
+        (payload) => {
+          console.log(`[AuthProvider] Realtime update received for user ID: ${userId}`, payload);
+          const updatedUser = payload.new as User;
+          setUserCache(prevCache => ({ ...prevCache, [userId]: updatedUser }));
+          setUser(updatedUser);
+        }
+      )
+      .subscribe();
+
+    // Store the unsubscribe function
+    setRealtimeSubscription({
+      unsubscribe: () => {
+        console.log(`[AuthProvider] Unsubscribing from realtime updates for user ID: ${userId}`);
+        supabase.removeChannel(channel);
+      }
+    });
+  }, [realtimeSubscription]);
 
   const login = async (email: string, password: string) => {
     console.log(`[AuthProvider] Login attempt for: ${email}`);
@@ -86,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await fetchUserData(data.user.id);
         if (userData) {
           setUser(userData);
+          setupRealtimeSubscription(data.user.id); // Setup realtime subscription after login
           console.log('[AuthProvider] Login successful, user data set:', userData);
         } else {
           console.warn('[AuthProvider] Login successful but no user data found');
@@ -101,6 +151,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     console.log('[AuthProvider] Logging out user');
     try {
+      // Clean up realtime subscription
+      if (realtimeSubscription) {
+        realtimeSubscription.unsubscribe();
+        setRealtimeSubscription(null);
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
@@ -126,7 +182,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data.user) {
         console.log('[AuthProvider] Signup successful, user created:', data.user.id);
-        // User will be in "En attente" role until approved by admin
       }
     } catch (error: any) {
       console.error('[AuthProvider] Signup failed:', error.message);
@@ -135,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUserProfile = useCallback(async () => {
-    setLoading(true); // Indicate loading while refreshing
+    setLoading(true);
     try {
       const { data: { user: authUser }, error } = await supabase.auth.getUser();
       if (error) throw error;
@@ -144,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await fetchUserData(authUser.id);
         if (userData) {
           setUser(userData);
+          setupRealtimeSubscription(authUser.id); // Setup realtime subscription after refresh
           console.log('[AuthProvider] User profile refreshed:', userData);
         } else {
           console.warn('[AuthProvider] Failed to refresh user profile: No user data found.');
@@ -159,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [fetchUserData]);
+  }, [fetchUserData, setupRealtimeSubscription]);
 
   useEffect(() => {
     console.log('[AuthProvider] Setting up auth listener');
@@ -171,21 +227,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await fetchUserData(session.user.id);
         if (userData) {
           setUser(userData);
+          setupRealtimeSubscription(session.user.id); // Setup realtime subscription after auth event
           console.log('[AuthProvider] User data loaded after auth event:', userData);
         } else {
           console.warn('[AuthProvider] User signed in/updated/initial session but no data found');
           setUser(null);
         }
       } else if (event === 'SIGNED_OUT') {
+        // Clean up realtime subscription
+        if (realtimeSubscription) {
+          realtimeSubscription.unsubscribe();
+          setRealtimeSubscription(null);
+        }
         setUser(null);
         console.log('[AuthProvider] User signed out');
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('[AuthProvider] Token refreshed');
       }
-      setLoading(false); // Ensure loading is set to false after any auth state change
+      setLoading(false);
     });
 
-    // Check initial session directly on mount
     const checkInitialSessionDirectly = async () => {
       console.log('[AuthProvider] Checking initial session directly...');
       try {
@@ -198,6 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userData = await fetchUserData(session.user.id);
           if (userData) {
             setUser(userData);
+            setupRealtimeSubscription(session.user.id); // Setup realtime subscription for initial session
             console.log('[AuthProvider] Initial session user data loaded:', userData);
           } else {
             console.warn('[AuthProvider] Initial session found directly but no user data');
@@ -220,8 +282,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       console.log('[AuthProvider] Cleaning up auth listener');
       subscription.unsubscribe();
+
+      // Clean up realtime subscription
+      if (realtimeSubscription) {
+        realtimeSubscription.unsubscribe();
+      }
     };
-  }, [fetchUserData]);
+  }, [fetchUserData, setupRealtimeSubscription, realtimeSubscription]);
 
   const value = {
     user,

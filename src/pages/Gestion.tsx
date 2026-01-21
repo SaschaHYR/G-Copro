@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
-import { Home, PlusCircle, ListChecks, Building } from 'lucide-react';
+import { Home, PlusCircle, Edit, Trash2, ListChecks, Building } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import CoproprieteForm from '@/components/CoproprieteForm';
 import CoproprieteTable from '@/components/CoproprieteTable';
-import { useNavigate } from 'react-router-dom';
 
 interface Copropriete {
   id: string;
@@ -28,13 +31,23 @@ interface Copropriete {
   syndic_telephone?: string;
 }
 
+interface Categorie {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 const Gestion = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [coproprietes, setCoproprietes] = useState<Copropriete[]>([]);
+  const [categories, setCategories] = useState<Categorie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [newCopropriete, setNewCopropriete] = useState<Omit<Copropriete, 'id'>>({
     nom: '',
     adresse: '',
@@ -48,9 +61,10 @@ const Gestion = () => {
     syndic_email: '',
     syndic_telephone: ''
   });
+  const [newCategory, setNewCategory] = useState('');
   const [editingCopropriete, setEditingCopropriete] = useState<Copropriete | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Categorie | null>(null);
   const [activeTab, setActiveTab] = useState<'coproprietes' | 'categories'>('coproprietes');
-  const navigate = useNavigate();
 
   const fetchCoproprietes = async () => {
     try {
@@ -73,8 +87,30 @@ const Gestion = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de charger les catégories",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   useEffect(() => {
     fetchCoproprietes();
+    fetchCategories();
   }, []);
 
   const canManageCoproprietes = user?.role === 'Superadmin' || user?.role === 'ASL';
@@ -216,6 +252,127 @@ const Gestion = () => {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!canManageCoproprietes) {
+      toast({
+        title: "Accès non autorisé",
+        description: "Vous n'avez pas la permission d'ajouter des catégories.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!newCategory.trim()) {
+      toast({
+        title: "Champ requis",
+        description: "Le nom de la catégorie ne peut pas être vide.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .insert([{ name: newCategory }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Catégorie ajoutée avec succès",
+      });
+
+      setIsAddCategoryDialogOpen(false);
+      setNewCategory('');
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'ajouter la catégorie",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!canManageCoproprietes || !editingCategory) {
+      toast({
+        title: "Accès non autorisé",
+        description: "Vous n'avez pas la permission de modifier des catégories.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!editingCategory.name.trim()) {
+      toast({
+        title: "Champ requis",
+        description: "Le nom de la catégorie ne peut pas être vide.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: editingCategory.name })
+        .eq('id', editingCategory.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Catégorie mise à jour avec succès",
+      });
+
+      setIsEditCategoryDialogOpen(false);
+      setEditingCategory(null);
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de mettre à jour la catégorie",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!canManageCoproprietes) {
+      toast({
+        title: "Accès non autorisé",
+        description: "Vous n'avez pas la permission de supprimer des catégories.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ? Cette action est irréversible.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Catégorie supprimée avec succès",
+      });
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer la catégorie",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFieldChange = (field: string, value: any) => {
     if (editingCopropriete) {
       setEditingCopropriete({ ...editingCopropriete, [field]: value });
@@ -318,22 +475,94 @@ const Gestion = () => {
         <Card className="rounded-lg shadow-lg">
           <CardHeader className="flex justify-between items-center">
             <CardTitle className="text-xl font-bold md:text-2xl">Gestion des catégories</CardTitle>
-            <Link to="/categories" className="text-sm text-primary hover:text-primary/80">
-              Voir la gestion complète des catégories →
-            </Link>
+            {canManageCoproprietes && (
+              <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-full px-4 py-2 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <span className="text-sm">Ajouter une catégorie</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] rounded-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold text-primary">Nouvelle Catégorie</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category-name">Nom de la catégorie</Label>
+                      <Input
+                        id="category-name"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="Entrez le nom de la catégorie"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleAddCategory}
+                      className="w-full rounded-full"
+                    >
+                      Ajouter Catégorie
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Pour gérer les catégories, veuillez accéder à la page dédiée en cliquant sur le lien ci-dessus.
-            </p>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => navigate('/categories')}
-            >
-              <ListChecks className="mr-2 h-4 w-4" />
-              <span>Aller à la gestion des catégories</span>
-            </Button>
+            {loadingCategories ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : categories.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Aucune catégorie trouvée. Cliquez sur "Ajouter une catégorie" pour en créer une nouvelle.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Date de création</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell>
+                        {new Date(category.created_at).toLocaleDateString('fr-FR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </TableCell>
+                      <TableCell className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingCategory(category);
+                            setIsEditCategoryDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}
@@ -350,6 +579,33 @@ const Gestion = () => {
               onSubmit={handleUpdateCopropriete}
               submitText="Enregistrer les modifications"
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-primary">Modifier la Catégorie</DialogTitle>
+          </DialogHeader>
+          {editingCategory && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-name">Nom de la catégorie</Label>
+                <Input
+                  id="edit-category-name"
+                  value={editingCategory.name}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                  placeholder="Entrez le nom de la catégorie"
+                />
+              </div>
+              <Button
+                onClick={handleUpdateCategory}
+                className="w-full rounded-full"
+              >
+                Enregistrer les modifications
+              </Button>
+            </div>
           )}
         </DialogContent>
       </Dialog>

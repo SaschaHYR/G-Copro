@@ -28,14 +28,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (userId: string): Promise<User | null> => {
-    console.log(`[AuthProvider] Fetching user data for ID: ${userId}`);
+    console.log(`[AuthProvider] Starting fetchUserData for ID: ${userId}`);
 
     try {
-      const { data, error } = await supabase
+      console.log(`[AuthProvider] About to query user_informations table for ID: ${userId}`);
+
+      // Ajout d'un timeout pour éviter les blocages infinis
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('[AuthProvider] Timeout: Query took too long (5 seconds)'));
+        }, 5000);
+      });
+
+      const queryPromise = supabase
         .from('user_informations')
         .select('*')
         .eq('id', userId)
         .limit(1);
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (result instanceof Error) {
+        throw result;
+      }
+
+      // Correction des erreurs TypeScript
+      const response = result as { data: any[], error: any | null };
+      const { data, error } = response;
+
+      console.log(`[AuthProvider] Query completed for ID: ${userId}`);
+      console.log(`[AuthProvider] Query result data:`, data);
+      console.log(`[AuthProvider] Query result error:`, error);
 
       if (error) {
         console.error('[AuthProvider] Error fetching user data:', error);
@@ -52,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return userData;
     } catch (err: any) {
       console.error('[AuthProvider] Error in fetchUserData:', err.message);
+      console.error('[AuthProvider] Full error object:', err);
       return null;
     }
   }, []);
@@ -112,11 +136,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUserProfile = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('[AuthProvider] Starting refreshUserProfile');
       const { data: { user: authUser }, error } = await supabase.auth.getUser();
+      console.log('[AuthProvider] getUser result:', { user: authUser, error });
+
       if (error) throw error;
 
       if (authUser) {
+        console.log(`[AuthProvider] Authenticated user found: ${authUser.id}`);
         const userData = await fetchUserData(authUser.id);
+        console.log('[AuthProvider] fetchUserData result:', userData);
+
         if (userData) {
           setUser(userData);
           console.log('[AuthProvider] User profile refreshed:', userData);
@@ -130,8 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error: any) {
       console.error('[AuthProvider] Error refreshing user profile:', error.message);
+      console.error('[AuthProvider] Full error in refreshUserProfile:', error);
       setUser(null);
     } finally {
+      console.log('[AuthProvider] refreshUserProfile completed, setting loading to false');
       setLoading(false);
     }
   }, [fetchUserData]);
@@ -145,6 +177,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') && session?.user) {
         console.log(`[AuthProvider] Handling ${event} event for user ID: ${session.user.id}`);
         const userData = await fetchUserData(session.user.id);
+        console.log(`[AuthProvider] fetchUserData result in handleAuthStateChange:`, userData);
+
         if (userData) {
           setUser(userData);
           console.log('[AuthProvider] User data loaded after auth event:', userData);
@@ -169,11 +203,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkInitialSession = async () => {
       setLoading(true);
       try {
+        console.log('[AuthProvider] Starting checkInitialSession');
         const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[AuthProvider] getSession result:', { session, error });
+
         if (error) {
           console.error('[AuthProvider] Error getting initial session:', error);
           setUser(null);
         } else if (session?.user) {
+          console.log(`[AuthProvider] Initial session found for user: ${session.user.id}`);
           await handleAuthStateChange('INITIAL_SESSION', session);
         } else {
           console.log('[AuthProvider] No initial session found directly.');
@@ -183,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('[AuthProvider] Error in checkInitialSession:', error);
         setUser(null);
       } finally {
+        console.log('[AuthProvider] checkInitialSession completed, setting loading to false');
         setLoading(false);
       }
     };

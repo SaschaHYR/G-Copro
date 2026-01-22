@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Index from './pages/Index';
 import Admin from './pages/Admin';
 import Gestion from './pages/Gestion';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import './globals.css';
 
@@ -34,6 +35,11 @@ function App() {
               <Route path="/gestion" element={
                 <ProtectedRoute>
                   <Gestion />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
             </Routes>

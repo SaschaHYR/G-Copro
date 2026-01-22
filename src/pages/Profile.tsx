@@ -12,10 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { Home, Edit, Save, X } from 'lucide-react';
+import { Home, Edit, Save, X, Upload } from 'lucide-react';
 
 const Profile = () => {
-  const { user, loading, refreshUserProfile } = useAuth(); // Destructure refreshUserProfile
+  const { user, loading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +24,7 @@ const Profile = () => {
     last_name: user?.last_name || '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Update editedUser when user data changes
   React.useEffect(() => {
@@ -71,7 +72,7 @@ const Profile = () => {
         description: "Vos informations ont été mises à jour avec succès.",
       });
 
-      await refreshUserProfile(); // Call to refresh the global user state
+      await refreshUserProfile();
       setIsEditing(false);
     } catch (error: any) {
       toast({
@@ -81,6 +82,59 @@ const Profile = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // Upload the file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `profile_photos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL of the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath);
+
+      // Update the user's profile with the photo URL
+      const { error: updateError } = await supabase
+        .from('user_informations')
+        .update({
+          avatar_url: publicUrl
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Photo de profil mise à jour",
+        description: "Votre photo de profil a été mise à jour avec succès.",
+      });
+
+      await refreshUserProfile();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du téléchargement de la photo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -117,13 +171,35 @@ const Profile = () => {
 
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="flex flex-col items-center gap-4">
-          <Avatar className="w-20 h-20 md:w-24 md:h-24">
-            <AvatarImage src="/placeholder.svg" alt="Photo de profil" />
-            <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground md:text-2xl">
-              {user.first_name ? user.first_name.charAt(0) : 'U'}
-              {user.last_name ? user.last_name.charAt(0) : ''}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="w-20 h-20 md:w-24 md:h-24">
+              <AvatarImage
+                src={(user as any).avatar_url || "/placeholder.svg"}
+                alt="Photo de profil"
+              />
+              <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground md:text-2xl">
+                {user.first_name ? user.first_name.charAt(0) : 'U'}
+                {user.last_name ? user.last_name.charAt(0) : ''}
+              </AvatarFallback>
+            </Avatar>
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute -bottom-2 -right-2 rounded-full bg-background border-border"
+              onClick={() => document.getElementById('photo-upload')?.click()}
+              disabled={isUploading}
+              title="Changer la photo de profil"
+            >
+              <Upload className="h-4 w-4" />
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </Button>
+          </div>
           <div className="text-center">
             <CardTitle className="text-xl font-bold md:text-2xl">
               {user.first_name} {user.last_name}

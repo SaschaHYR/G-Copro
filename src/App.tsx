@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './pages/Login';
 import Index from './pages/Index';
 import Admin from './pages/Admin';
+import Gestion from './pages/Gestion';
 import ProtectedRoute from './components/ProtectedRoute';
 import './globals.css';
 
@@ -28,6 +29,11 @@ function App() {
               <Route path="/admin" element={
                 <ProtectedRoute requiredRole="Superadmin">
                   <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/gestion" element={
+                <ProtectedRoute>
+                  <Gestion />
                 </ProtectedRoute>
               } />
             </Routes>

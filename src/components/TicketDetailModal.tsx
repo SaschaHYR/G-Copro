@@ -19,10 +19,17 @@ interface TicketDetailModalProps {
   ticket: Ticket;
 }
 
+interface UserDisplayInfo {
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;
+}
+
 const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Commentaire[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [userCache, setUserCache] = useState<Record<string, UserDisplayInfo>>({});
   const { toast } = useToast();
   const { markTicketAsRead } = useNotifications();
 
@@ -35,7 +42,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       setLoadingComments(true);
       const { data, error } = await supabase
         .from('commentaires')
-        .select('*, auteur:user_informations!auteur(first_name, last_name)')
+        .select('*, auteur:user_informations!auteur(first_name, last_name, role)')
         .eq('ticket_id', ticket.id)
         .order('date', { ascending: true });
 
@@ -49,6 +56,33 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       });
     } finally {
       setLoadingComments(false);
+    }
+  };
+
+  const fetchUserData = async (userId: string): Promise<UserDisplayInfo | null> => {
+    // Check if user data is already in cache
+    if (userCache[userId]) {
+      return userCache[userId];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_informations')
+        .select('first_name, last_name, role')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Update cache
+        setUserCache(prev => ({ ...prev, [userId]: data }));
+        return data;
+      }
+      return null;
+    } catch (error: any) {
+      console.error(`Error fetching user data for ID ${userId}:`, error.message);
+      return null;
     }
   };
 
@@ -68,12 +102,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     setOpen(false);
   };
 
-  const getUserDisplayName = (userId: string) => {
+  const getUserDisplayName = async (userId: string): Promise<string> => {
     // Check if we have the user data from comments
     const comment = comments.find((c: Commentaire) => c.auteur === userId);
     const commentUser = comment?.auteur;
     if (commentUser && typeof commentUser === 'object' && commentUser !== null && 'first_name' in commentUser) {
-      const userObj = commentUser as { first_name?: string; last_name?: string };
+      const userObj = commentUser as UserDisplayInfo;
       return `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim() || 'Utilisateur';
     }
 
@@ -83,6 +117,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     }
     if (ticket.cloture_par === userId && ticket.cloture_par_user) {
       return closerName;
+    }
+
+    // Fetch user data if not available in comments
+    const userData = await fetchUserData(userId);
+    if (userData) {
+      return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Utilisateur';
     }
 
     return 'Utilisateur';
@@ -205,28 +245,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
                 ) : (
                   <div className="space-y-4">
                     {comments.map((comment) => (
-                      <div key={comment.id} className="flex items-start space-x-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src="/placeholder.svg" alt="Avatar" />
-                          <AvatarFallback className="text-xs font-bold bg-primary text-primary-foreground">
-                            {getUserDisplayName(comment.auteur).charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-1 mb-1">
-                            <p className="font-medium text-foreground text-sm">{getUserDisplayName(comment.auteur)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(comment.date), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                            </p>
-                            <Badge variant={comment.type === 'reponse' ? 'default' : 'secondary'} className="text-xs px-1 py-0 h-5">
-                              {comment.type === 'reponse' ? 'Réponse' : 'Transfert'}
-                            </Badge>
-                          </div>
-                          <div className="bg-muted p-2 rounded-lg text-sm">
-                            <p className="text-foreground">{comment.message}</p>
-                          </div>
-                        </div>
-                      </div>
+                      <CommentItem key={comment.id} comment={comment} getUserDisplayName={getUserDisplayName} />
                     ))}
                   </div>
                 )}
@@ -239,6 +258,48 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
         </Button>
       </DialogContent>
     </Dialog>
+  );
+};
+
+interface CommentItemProps {
+  comment: Commentaire;
+  getUserDisplayName: (userId: string) => Promise<string>;
+}
+
+const CommentItem: React.FC<CommentItemProps> = ({ comment, getUserDisplayName }) => {
+  const [displayName, setDisplayName] = useState<string>('Chargement...');
+
+  useEffect(() => {
+    const fetchDisplayName = async () => {
+      const name = await getUserDisplayName(comment.auteur);
+      setDisplayName(name);
+    };
+    fetchDisplayName();
+  }, [comment.auteur, getUserDisplayName]);
+
+  return (
+    <div className="flex items-start space-x-2">
+      <Avatar className="w-8 h-8">
+        <AvatarImage src="/placeholder.svg" alt="Avatar" />
+        <AvatarFallback className="text-xs font-bold bg-primary text-primary-foreground">
+          {displayName.charAt(0)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="flex items-center space-x-1 mb-1">
+          <p className="font-medium text-foreground text-sm">{displayName}</p>
+          <p className="text-xs text-muted-foreground">
+            {format(new Date(comment.date), 'dd MMM yyyy à HH:mm', { locale: fr })}
+          </p>
+          <Badge variant={comment.type === 'reponse' ? 'default' : 'secondary'} className="text-xs px-1 py-0 h-5">
+            {comment.type === 'reponse' ? 'Réponse' : 'Transfert'}
+          </Badge>
+        </div>
+        <div className="bg-muted p-2 rounded-lg text-sm">
+          <p className="text-foreground">{comment.message}</p>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -23,6 +23,7 @@ interface UserDisplayInfo {
   first_name: string | null;
   last_name: string | null;
   role: string | null;
+  username: string | null; // Ajout du username
 }
 
 interface CommentWithAuthor extends Commentaire {
@@ -53,12 +54,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       if (error) throw error;
 
       // Fetch all unique author IDs
-      const authorIds = [...new Set(data.map(comment => comment.auteur))];
+      const authorIds = [...new Set(data.map(comment => comment.auteur))].filter(Boolean) as string[]; // Filter out null/undefined
 
-      // Fetch all author data in one batch
+      // Fetch all author data in one batch, including username
       const { data: authorsData, error: authorsError } = await supabase
         .from('user_informations')
-        .select('id, first_name, last_name, role')
+        .select('id, first_name, last_name, role, username') // Sélectionne le username
         .in('id', authorIds);
 
       if (authorsError) throw authorsError;
@@ -69,6 +70,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
         return acc;
       }, {} as Record<string, UserDisplayInfo>);
 
+      // Debug: Log the author map
+      console.log("[TicketDetailModal] Author Map:", authorMap);
+
       // Update user cache
       setUserCache(prev => ({ ...prev, ...authorMap }));
 
@@ -77,6 +81,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
         ...comment,
         authorInfo: authorMap[comment.auteur] || null
       }));
+
+      // Debug: Log comments with author info
+      console.log("[TicketDetailModal] Comments with Author Info:", commentsWithAuthors);
 
       setComments(commentsWithAuthors);
     } catch (error: any) {
@@ -111,6 +118,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     if (authorInfo) {
       const fullName = `${authorInfo.first_name || ''} ${authorInfo.last_name || ''}`.trim();
       if (fullName) return fullName;
+      if (authorInfo.username) return authorInfo.username; // Fallback to username
     }
 
     // Fallback to ticket creator or closer if available
@@ -121,11 +129,12 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       return closerName;
     }
 
-    // Fallback to cached user data
+    // Fallback to cached user data (should be populated by fetchComments)
     const cachedUser = userCache[userId];
     if (cachedUser) {
       const fullName = `${cachedUser.first_name || ''} ${cachedUser.last_name || ''}`.trim();
       if (fullName) return fullName;
+      if (cachedUser.username) return cachedUser.username; // Fallback to username
     }
 
     return 'Utilisateur inconnu';

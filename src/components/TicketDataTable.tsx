@@ -12,11 +12,13 @@ import { useEffect } from 'react';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNotifications } from '@/components/NotificationContext';
 
 const TicketDataTable = () => {
   const { tickets, isLoading, error, invalidateTickets } = useTickets();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { hasNewActions } = useNotifications();
 
   useEffect(() => {
     if (error) {
@@ -68,7 +70,7 @@ const TicketDataTable = () => {
           </Card>
         ) : (
           tickets.map((ticket) => (
-            <Card key={ticket.id} className="rounded-lg shadow-md border border-border">
+            <Card key={ticket.id} className={`rounded-lg shadow-md border border-border ${hasNewActions(ticket.id) ? 'border-2 border-red-500' : ''}`}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg font-semibold text-foreground truncate flex-1">
@@ -121,11 +123,7 @@ const TicketDataTable = () => {
                     ticketStatus={ticket.status}
                     onCloseSuccess={invalidateTickets}
                   />
-                  <TransferModal
-                    ticketId={ticket.id}
-                    currentDestinataireRole={ticket.destinataire_role}
-                    onTransferSuccess={invalidateTickets}
-                  />
+                  <TransferModal ticketId={ticket.id} currentDestinataireRole={ticket.destinataire_role} onTransferSuccess={invalidateTickets} />
                 </div>
               </CardContent>
             </Card>
@@ -161,7 +159,7 @@ const TicketDataTable = () => {
             </TableRow>
           ) : (
             tickets.map((ticket) => (
-              <TableRow key={ticket.id} className="hover:bg-muted/50 transition-colors">
+              <TableRow key={ticket.id} className={`hover:bg-muted/50 transition-colors ${hasNewActions(ticket.id) ? 'border-2 border-red-500' : ''}`}>
                 <TableCell className="font-medium text-sm md:text-base">{ticket.ticket_id_unique}</TableCell>
                 <TableCell className="text-sm md:text-base">{ticket.titre}</TableCell>
                 <TableCell className="text-sm md:text-base">{ticket.copro}</TableCell>

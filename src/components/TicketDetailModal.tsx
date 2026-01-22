@@ -43,6 +43,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const closerName = ticket.cloture_par_user ? `${ticket.cloture_par_user.first_name || ''} ${ticket.cloture_par_user.last_name || ''}`.trim() : 'N/A';
 
   const fetchComments = async () => {
+    console.log("[TicketDetailModal] fetchComments called for ticket:", ticket.id); // Added log
     try {
       setLoadingComments(true);
       const { data, error } = await supabase
@@ -92,6 +93,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
         description: error.message || "Impossible de charger les échanges pour ce ticket",
         variant: "destructive",
       });
+      console.error("[TicketDetailModal] Error in fetchComments:", error); // Added error log
     } finally {
       setLoadingComments(false);
     }

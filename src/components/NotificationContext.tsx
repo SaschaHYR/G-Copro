@@ -83,18 +83,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       for (const ticket of userTicketsData || []) {
         // Fetch the latest comment for each ticket
-        const { data: latestComment, error: commentError } = await supabase
+        const { data: latestCommentData, error: commentError } = await supabase
           .from('commentaires')
           .select('auteur, date')
           .eq('ticket_id', ticket.id)
           .order('date', { ascending: false })
-          .limit(1)
-          .single();
+          .limit(1); // Changed from .single() to .limit(1)
 
-        if (commentError && commentError.code !== 'PGRST116') { // PGRST116 means no rows found
+        if (commentError) {
           console.error(`[NotificationContext] Error fetching latest comment for ticket ${ticket.id}:`, commentError);
           continue;
         }
+        
+        const latestComment = latestCommentData?.[0]; // Get the first item if data exists
 
         if (latestComment) {
           // Check if the latest action was by another user and the ticket is not marked as read

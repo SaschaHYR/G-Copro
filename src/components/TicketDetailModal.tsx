@@ -25,9 +25,13 @@ interface UserDisplayInfo {
   role: string | null;
 }
 
+interface CommentWithAuthor extends Commentaire {
+  authorInfo?: UserDisplayInfo;
+}
+
 const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
   const [open, setOpen] = useState(false);
-  const [comments, setComments] = useState<Commentaire[]>([]);
+  const [comments, setComments] = useState<CommentWithAuthor[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [userCache, setUserCache] = useState<Record<string, UserDisplayInfo>>({});
   const { toast } = useToast();
@@ -42,12 +46,39 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       setLoadingComments(true);
       const { data, error } = await supabase
         .from('commentaires')
-        .select('*, auteur:user_informations!auteur(first_name, last_name, role)')
+        .select('*')
         .eq('ticket_id', ticket.id)
         .order('date', { ascending: true });
 
       if (error) throw error;
-      setComments(data || []);
+
+      // Fetch all unique author IDs
+      const authorIds = [...new Set(data.map(comment => comment.auteur))];
+
+      // Fetch all author data in one batch
+      const { data: authorsData, error: authorsError } = await supabase
+        .from('user_informations')
+        .select('id, first_name, last_name, role')
+        .in('id', authorIds);
+
+      if (authorsError) throw authorsError;
+
+      // Create a map of author data
+      const authorMap = authorsData.reduce((acc, author) => {
+        acc[author.id] = author;
+        return acc;
+      }, {} as Record<string, UserDisplayInfo>);
+
+      // Update user cache
+      setUserCache(prev => ({ ...prev, ...authorMap }));
+
+      // Combine comments with author data
+      const commentsWithAuthors = data.map(comment => ({
+        ...comment,
+        authorInfo: authorMap[comment.auteur] || null
+      }));
+
+      setComments(commentsWithAuthors);
     } catch (error: any) {
       toast({
         title: "Erreur de chargement des commentaires",
@@ -56,33 +87,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       });
     } finally {
       setLoadingComments(false);
-    }
-  };
-
-  const fetchUserData = async (userId: string): Promise<UserDisplayInfo | null> => {
-    // Check if user data is already in cache
-    if (userCache[userId]) {
-      return userCache[userId];
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('user_informations')
-        .select('first_name, last_name, role')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        // Update cache
-        setUserCache(prev => ({ ...prev, [userId]: data }));
-        return data;
-      }
-      return null;
-    } catch (error: any) {
-      console.error(`Error fetching user data for ID ${userId}:`, error.message);
-      return null;
     }
   };
 
@@ -102,15 +106,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     setOpen(false);
   };
 
-  const getUserDisplayName = async (userId: string): Promise<string> => {
-    // First, try to get user data from the comments (if already joined)
-    const comment = comments.find((c: Commentaire) => c.auteur === userId);
-    if (comment && (comment as any).auteur_user) {
-      const userData = (comment as any).auteur_user;
-      const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
-      if (fullName) {
-        return fullName;
-      }
+  const getUserDisplayName = (userId: string, authorInfo?: UserDisplayInfo | null): string => {
+    // First try to use the author info we fetched with the comments
+    if (authorInfo) {
+      const fullName = `${authorInfo.first_name || ''} ${authorInfo.last_name || ''}`.trim();
+      if (fullName) return fullName;
     }
 
     // Fallback to ticket creator or closer if available
@@ -121,11 +121,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       return closerName;
     }
 
-    // Fetch user data if not available in comments
-    const userData = await fetchUserData(userId);
-    if (userData) {
-      const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
-      return fullName || 'Utilisateur inconnu';
+    // Fallback to cached user data
+    const cachedUser = userCache[userId];
+    if (cachedUser) {
+      const fullName = `${cachedUser.first_name || ''} ${cachedUser.last_name || ''}`.trim();
+      if (fullName) return fullName;
     }
 
     return 'Utilisateur inconnu';
@@ -248,7 +248,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
                 ) : (
                   <div className="space-y-4">
                     {comments.map((comment) => (
-                      <CommentItem key={comment.id} comment={comment} getUserDisplayName={getUserDisplayName} />
+                      <CommentItem
+                        key={comment.id}
+                        comment={comment}
+                        displayName={getUserDisplayName(comment.auteur, comment.authorInfo)}
+                      />
                     ))}
                   </div>
                 )}
@@ -265,21 +269,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
 };
 
 interface CommentItemProps {
-  comment: Commentaire;
-  getUserDisplayName: (userId: string) => Promise<string>;
+  comment: CommentWithAuthor;
+  displayName: string;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, getUserDisplayName }) => {
-  const [displayName, setDisplayName] = useState<string>('Chargement...');
-
-  useEffect(() => {
-    const fetchDisplayName = async () => {
-      const name = await getUserDisplayName(comment.auteur);
-      setDisplayName(name);
-    };
-    fetchDisplayName();
-  }, [comment.auteur, getUserDisplayName]);
-
+const CommentItem: React.FC<CommentItemProps> = ({ comment, displayName }) => {
   return (
     <div className="flex items-start space-x-2">
       <Avatar className="w-8 h-8">

@@ -47,6 +47,10 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
         .order('date', { ascending: true });
 
       if (error) throw error;
+
+      // Debug: Log the structure of the comments data
+      console.log('Comments data structure:', data);
+
       setComments(data || []);
     } catch (error: any) {
       toast({
@@ -106,26 +110,37 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
     // Check if we have the user data from comments
     const comment = comments.find((c: Commentaire) => c.auteur === userId);
     const commentUser = comment?.auteur;
+
+    // Debug: Log what we're getting from comments
+    console.log('Comment user data for ID', userId, ':', commentUser);
+
     if (commentUser && typeof commentUser === 'object' && commentUser !== null && 'first_name' in commentUser) {
       const userObj = commentUser as UserDisplayInfo;
-      return `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim() || 'Utilisateur';
+      const fullName = `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim();
+      console.log('Using comment user data:', fullName || 'Utilisateur inconnu');
+      return fullName || 'Utilisateur inconnu';
     }
 
     // Fallback to ticket creator or closer if available
     if (ticket.createur_id === userId && ticket.createur) {
+      console.log('Using ticket creator data:', creatorName);
       return creatorName;
     }
     if (ticket.cloture_par === userId && ticket.cloture_par_user) {
+      console.log('Using ticket closer data:', closerName);
       return closerName;
     }
 
     // Fetch user data if not available in comments
     const userData = await fetchUserData(userId);
     if (userData) {
-      return `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Utilisateur';
+      const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
+      console.log('Using fetched user data:', fullName || 'Utilisateur inconnu');
+      return fullName || 'Utilisateur inconnu';
     }
 
-    return 'Utilisateur';
+    console.log('No user data found for ID:', userId);
+    return 'Utilisateur inconnu';
   };
 
   return (

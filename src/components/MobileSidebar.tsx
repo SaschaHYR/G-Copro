@@ -66,7 +66,7 @@ const MobileSidebar = () => {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-4">
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full space-y-4">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-primary">Menu</h2>
           </div>

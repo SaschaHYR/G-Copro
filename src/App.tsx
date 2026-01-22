@@ -5,6 +5,7 @@ import { AuthProvider } from './components/AuthProvider';
 import { NotificationProvider } from './components/NotificationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import Index from './pages/Index';
 import Admin from './pages/Admin';
 import Gestion from './pages/Gestion';
@@ -22,6 +23,7 @@ function App() {
           <QueryClientProvider client={queryClient}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />

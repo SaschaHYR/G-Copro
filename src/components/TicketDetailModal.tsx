@@ -137,7 +137,8 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket }) => {
       if (cachedUser.username) return cachedUser.username; // Fallback to username
     }
 
-    return 'Utilisateur inconnu';
+    // Final fallback: display the user ID if no name or username is found
+    return userId || 'Utilisateur inconnu';
   };
 
   return (
